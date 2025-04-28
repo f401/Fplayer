@@ -20,6 +20,8 @@ import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
 import org.jaudiotagger.tag.TagException;
 import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
 import org.jaudiotagger.tag.FieldKey;
+import android.util.Log;
+import android.text.TextUtils;
 
 public class Utils {
 	
@@ -78,6 +80,7 @@ public class Utils {
 			}
 			String suff = file.getName().substring(file.getName().lastIndexOf("."));
 			if (SUFFIX.contains(suff)) {
+				Log.i("Utils", "Got file " + file);
 				res.add(file);
 			}
 		}
@@ -86,9 +89,16 @@ public class Utils {
 	
 	public static MusicDetail readMusicDetail(File file) throws CannotReadException, InvalidAudioFrameException, IOException, TagException, ReadOnlyFileException {
 		AudioFile a = AudioFileIO.read(file);
+		String title = a.getTag().getFirst(FieldKey.TITLE);
+		String artist = a.getTag().getFirst(FieldKey.ARTIST);
+		if (TextUtils.isEmpty(title)) {
+			String name = file.getName();
+			name = name.substring(0, name.lastIndexOf("."));
+			artist = name.substring(0, name.indexOf("-")).trim();
+			title = name.substring(name.indexOf("-") + 1).trim();
+		}
 		return new MusicDetail(
-			a.getTag().getFirst(FieldKey.TITLE), 
-			a.getTag().getFirst(FieldKey.ARTIST),
+			title, artist,
 			a.getAudioHeader().getTrackLength() / 60,
 			a.getAudioHeader().getTrackLength() % 60,
 			file);

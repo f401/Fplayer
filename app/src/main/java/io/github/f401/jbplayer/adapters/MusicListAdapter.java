@@ -10,13 +10,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import io.github.f401.jbplayer.MusicDetail;
 import io.github.f401.jbplayer.databinding.MusicListItemBinding;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.MusicItemHolder> {
 	
 	private Context context;
-	private ArrayList<MusicDetail> mData;
+	private List<MusicDetail> mData;
 
-	public MusicListAdapter(Context context, ArrayList<MusicDetail> mData) {
+	public MusicListAdapter(Context context, List<MusicDetail> mData) {
 		this.context = context;
 		this.mData = mData;
 	}
