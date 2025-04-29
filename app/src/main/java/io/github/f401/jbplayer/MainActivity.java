@@ -81,11 +81,12 @@ public class MainActivity extends AppCompatActivity {
 	private void applyDetailToStatusBar(@NonNull MusicDetail detail) {
 		binding.mainTitleTextView.setText(detail.getTitle());
 		binding.mainArtistTextView.setText(detail.getArtist());
-
+		binding.mainMusicTime.setText(getString(R.string.min_second_time_fmt, detail.getMin(), detail.getSecond()));
 	}
 
 	private void playMusic(int pos) {
-
+		MusicDetail detail = mMusicList.get(pos);
+		applyDetailToStatusBar(detail);
 	}
 
     @Override

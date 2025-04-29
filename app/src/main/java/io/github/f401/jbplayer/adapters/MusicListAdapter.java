@@ -52,27 +52,26 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.Musi
 	}
 
 	@Override
-	public void onBindViewHolder(MusicListAdapter.MusicItemHolder vH, int p) {
+	public void onBindViewHolder(MusicListAdapter.MusicItemHolder vH, final int p) {
 		MusicDetail detail = mData.get(p);
 		vH.author.setText(detail.getArtist());
 		vH.title.setText(detail.getTitle());
 		vH.time.setText(context.getString(R.string.min_second_time_fmt, detail.getMin(), detail.getSecond()));
+		if (onViewClickListener != null) {
+			vH.root.setOnClickListener(new View.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						if (getOnViewClickListener() != null) getOnViewClickListener().onItemClick(p);
+					}
+				});
+		}
 	}
 
 	@NonNull
 	@Override
-	public MusicListAdapter.MusicItemHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int p) {
+	public MusicListAdapter.MusicItemHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, final int p) {
 		MusicListItemBinding binding = MusicListItemBinding.inflate(LayoutInflater.from(context), viewGroup, false);
-		MusicItemHolder holder = new MusicItemHolder(binding.getRoot());
-		if (onViewClickListener != null) {
-			holder.root.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-					if (getOnViewClickListener() != null) getOnViewClickListener().onItemClick(p);
-				}
-			});
-		}
-		return holder;
+		return new MusicItemHolder(binding.getRoot());
 	}
 
     
