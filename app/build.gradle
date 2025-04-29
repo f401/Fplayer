@@ -53,7 +53,8 @@ android {
 	// viewBinding配置
 	buildFeatures{
 		// true则启用 viewBinding
-		viewBinding false
+		viewBinding true
+		aidl true
 		// 使用Androidx，暂时先这样
 		// 默认为true，gradle 8.5不支持此写法
 		// 请更改gradle.properties文件 android.useAndroidX

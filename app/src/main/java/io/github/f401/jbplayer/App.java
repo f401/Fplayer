@@ -21,6 +21,7 @@ public class App extends Application {
 	public static String getSearchRoot() {
 		SharedPreferences pref = global.getSharedPreferences("defaults", Context.MODE_PRIVATE);
 		return pref.getString("searchRoot", "/storage/emulated/0/Download/KuGouLite/c/");
+//		return pref.getString("searchRoot", "/storage/emulated/0/Download/KuGouLite/c/");
 	}
 	
 	public static ExecutorService getThreadPool() {

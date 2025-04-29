@@ -14,7 +14,11 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.AdapterView;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import io.github.f401.jbplayer.adapters.MusicListAdapter;
 import io.github.f401.jbplayer.databinding.MainBinding;
@@ -65,7 +69,23 @@ public class MainActivity extends AppCompatActivity {
 		binding.mainMusicList.setVisibility(View.VISIBLE);
 		
 		MusicListAdapter adapter = new MusicListAdapter(this, mMusicList);
+		adapter.setOnViewClickListener(new MusicListAdapter.OnItemClickListener() {
+			@Override
+			public void onItemClick(int position) {
+				playMusic(position);
+			}
+		});
 		binding.mainMusicList.setAdapter(adapter);
+	}
+
+	private void applyDetailToStatusBar(@NonNull MusicDetail detail) {
+		binding.mainTitleTextView.setText(detail.getTitle());
+		binding.mainArtistTextView.setText(detail.getArtist());
+
+	}
+
+	private void playMusic(int pos) {
+
 	}
 
     @Override
@@ -91,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
 
 				@Override
 				public void onClick(View v) {
-					binding.getRoot().openDrawer(Gravity.START);
+					binding.getRoot().openDrawer(GravityCompat.START);
 				}
 			});
 		binding.mainMusicList.setLayoutManager(new LinearLayoutManager(this));
