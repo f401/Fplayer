@@ -1,6 +1,5 @@
 package io.github.f401.jbplayer;
 
-import java.util.Collections;
 import java.util.List;
 
 public class MusicQueue {

@@ -119,9 +119,17 @@ public class MainActivity extends AppCompatActivity {
 		
 		if (!TextUtils.isEmpty(App.getSearchRoot())) {
 			Intent intent = new Intent(this, MusicService.class);
+			startService(intent);
 			bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 		}
 		//new ViewModelProvider(this, new ViewModelProvider.NewInstanceFactory()).get(
     }
-	
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		Intent intent = new Intent(this, MusicService.class);
+		stopService(intent);
+		unbindService(mConnection);
+	}
 }
