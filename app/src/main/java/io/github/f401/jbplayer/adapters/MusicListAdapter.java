@@ -52,7 +52,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.Musi
 	}
 
 	@Override
-	public void onBindViewHolder(MusicListAdapter.MusicItemHolder vH, final int p) {
+	public void onBindViewHolder(MusicListAdapter.MusicItemHolder vH, int p) {
 		MusicDetail detail = mData.get(p);
 		vH.author.setText(detail.getArtist());
 		vH.title.setText(detail.getTitle());
@@ -61,7 +61,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.Musi
 			vH.root.setOnClickListener(new View.OnClickListener() {
 					@Override
 					public void onClick(View v) {
-						if (getOnViewClickListener() != null) getOnViewClickListener().onItemClick(p);
+						if (getOnViewClickListener() != null) getOnViewClickListener().onItemClick(vH.getAdapterPosition());
 					}
 				});
 		}
