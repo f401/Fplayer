@@ -20,6 +20,11 @@ public class MusicQueue {
         return queue.get(pos);
     }
 
+    public MusicDetail playPreviousMusic() {
+        pos = pos == 0 ? queue.size() - 1 : (pos - 1) % queue.size();
+        return queue.get(pos);
+    }
+
     public void insertNext(MusicDetail detail) {
         int idx = queue.indexOf(detail);
         if (idx != -1) {

@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 public class MusicService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener {
 	private static final String TAG = "MusicService";
@@ -25,29 +26,56 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		@Override
 		public void fetchMusicList(final String path, final IMusicServiceInitFinishCallback callback) throws RemoteException {
 			Log.i(TAG, "Started to fetch music list. from " + path);
-			App.getThreadPool().submit(new Runnable() {
-
-					@Override
-					public void run() {
-						try {
-							List<MusicDetail> res = Utils.readMusicDetail(Utils.discoveryMusic(new File(path)));
-							Collections.sort(res);
-							mMusicList = res;
-							mMusicQueue = new MusicQueue(res);
-							callback.loadFinished(res);
-						} catch (Exception e) {
-							Log.e(TAG, "Error when reading ", e);
-							throw new RuntimeException(e);
-						}
-						Log.i(TAG, "Finished reading, Songs count " + mMusicList.size());
-					}
-					
+			App.getThreadPool().submit(new Callable<Void>() {
+				@Override
+				public Void call() throws Exception {
+					List<MusicDetail> res = Utils.readMusicDetail(Utils.discoveryMusic(new File(path)));
+					Collections.sort(res);
+					mMusicList = res;
+					mMusicQueue = new MusicQueue(res);
+					callback.loadFinished(res);
+					Log.i(TAG, "Finished reading, Songs count " + mMusicList.size());
+					return null;
+				}
 			});
 		}
 
 		@Override
-		public void registerOnMusicChangeListener(IOnMusicChangeListener listener) throws RemoteException {
+		public void registerOnMusicChangeListener(IOnMusicChangeListener listener) {
 			mOnChangeCallback.register(listener);
+		}
+
+		@Override
+		public long getCurrentMusicProgress() {
+			return mPlayer.getCurrentPosition();
+		}
+
+		@Override
+		public void playPreviousSong() {
+            try {
+                MusicService.this.playPreviousSong();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+		@Override
+		public void playNextSong() {
+            try {
+                MusicService.this.playNextSong();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+		@Override
+		public void doPause() throws RemoteException {
+			mPlayer.pause();
+		}
+
+		@Override
+		public void doContinue() throws RemoteException {
+			mPlayer.start();
 		}
 	};
 
@@ -87,14 +115,20 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	@Override
 	public void onCompletion(MediaPlayer mp) {
         try {
-            nextSong();
+            playNextSong();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-	private void nextSong() throws IOException {
+	private void playNextSong() throws IOException {
 		MusicDetail detail = mMusicQueue.nextSong();
+		doPlayMusic(detail);
+		notifyMusicChange();
+	}
+
+	private void playPreviousSong() throws IOException {
+		MusicDetail detail = mMusicQueue.playPreviousMusic();
 		doPlayMusic(detail);
 		notifyMusicChange();
 	}

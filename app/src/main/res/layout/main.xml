@@ -101,11 +101,20 @@
 
 				<TextView
 					android:layout_width="wrap_content"
-					android:id="@+id/mainMusicTime"
+					android:layout_height="wrap_content"
+					android:id="@+id/mainMusicCurrPos"
+					android:layout_marginBottom="3dp"
+					android:layout_above="@id/mainMusicSeekBar"
+					android:layout_alignStart="@id/mainMusicSeekBar"/>
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:id="@+id/mainMusicDur"
 					android:layout_marginBottom="3dp"
 					android:layout_above="@id/mainMusicSeekBar"
 					android:layout_alignEnd="@id/mainMusicSeekBar"
 					android:layout_height="wrap_content" />
+
 
 				<SeekBar
 					android:id="@+id/mainMusicSeekBar"

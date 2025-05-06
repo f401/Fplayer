@@ -7,4 +7,14 @@ interface IMusicService {
 	void fetchMusicList(String path, in IMusicServiceInitFinishCallback callback);
 
     void registerOnMusicChangeListener(in IOnMusicChangeListener listener);
+
+    long getCurrentMusicProgress();
+
+    void playPreviousSong();
+
+    void playNextSong();
+
+    void doPause();
+
+    void doContinue();
 }
