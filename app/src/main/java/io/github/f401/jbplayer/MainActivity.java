@@ -67,14 +67,18 @@ public class MainActivity extends AppCompatActivity {
 
 	private enum MusicState { PAUSE, PLAYING }
 
-	private void doFlipMusicState() throws RemoteException {
+	private void changeStateToPlaying() throws RemoteException {
+		if (mCurrentMusicState == MusicState.PAUSE) {
+			mCurrentMusicState = MusicState.PLAYING;
+			mService.doContinue();
+			binding.maincontrolleImg.setImageResource(android.R.drawable.ic_media_pause);
+		}
+	}
+	
+	private void changeStateToPause() throws RemoteException {
 		if (mCurrentMusicState == MusicState.PLAYING) {
 			mCurrentMusicState = MusicState.PAUSE;
 			mService.doPause();
-			binding.maincontrolleImg.setImageResource(android.R.drawable.ic_media_pause);
-		} else {
-			mCurrentMusicState = MusicState.PLAYING;
-			mService.doContinue();
 			binding.maincontrolleImg.setImageResource(android.R.drawable.ic_media_play);
 		}
 	}
@@ -116,6 +120,11 @@ public class MainActivity extends AppCompatActivity {
 							applyDetailToStatusBar(detail);
 							mCurrentMusic = detail;
 							startPositionUpdater();
+							try {
+								changeStateToPlaying();
+							} catch (RemoteException e) {
+								Log.e("MainActivity", "Failed to play", e);
+							}
 						}
 					});
 				}
@@ -150,7 +159,11 @@ public class MainActivity extends AppCompatActivity {
 			@Override
 			public void onClick(View v) {
                 try {
-                    doFlipMusicState();
+                    if (mCurrentMusicState == MusicState.PAUSE) {
+						changeStateToPlaying();
+					} else {
+						changeStateToPause();
+					}
                 } catch (RemoteException e) {
                     throw new RuntimeException(e);
                 }

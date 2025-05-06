@@ -52,7 +52,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.Musi
 	}
 
 	@Override
-	public void onBindViewHolder(MusicListAdapter.MusicItemHolder vH, int p) {
+	public void onBindViewHolder(final MusicListAdapter.MusicItemHolder vH, int p) {
 		MusicDetail detail = mData.get(p);
 		vH.author.setText(detail.getArtist());
 		vH.title.setText(detail.getTitle());
