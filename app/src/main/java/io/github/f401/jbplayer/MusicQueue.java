@@ -25,6 +25,14 @@ public class MusicQueue {
         return queue.get(pos);
     }
 
+    public void replaceCurrent(MusicDetail detail) {
+        int idx = queue.indexOf(detail);
+        if (idx != -1) {
+            queue.remove(idx);
+        }
+        queue.add(pos, detail);
+    }
+
     public void insertNext(MusicDetail detail) {
         int idx = queue.indexOf(detail);
         if (idx != -1) {

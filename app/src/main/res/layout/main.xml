@@ -48,7 +48,7 @@
 				android:layout_alignParentEnd="true"
 				android:layout_centerInParent="true"
 				android:layout_centerVertical="true"
-				android:id="@+id/mainLoadingMusic"/>
+				android:id="@+id/mainLoadingMusicProgressBar"/>
 
 			<RelativeLayout
 				android:id="@+id/mainRelativeLayout1"
@@ -75,46 +75,53 @@
 					android:layout_below="@id/mainTitleTextView"/>
 
 				<ImageButton
-					android:id="@+id/maincontrolleImg"
+					android:id="@+id/mainControllerBtnImg"
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
                     android:src="@android:drawable/ic_media_play"
 					android:layout_centerInParent="true"/>
 
 				<ImageButton
-					android:id="@+id/mainControllerRight"
+					android:id="@+id/mainControllerRightImgBtn"
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
 					android:layout_marginStart="30dp"
-					android:layout_alignTop="@id/maincontrolleImg"
-					android:layout_toEndOf="@+id/maincontrolleImg"
+					android:layout_alignTop="@id/mainControllerBtnImg"
+					android:layout_toEndOf="@+id/mainControllerBtnImg"
 					android:src="@android:drawable/ic_media_ff" />
 
 				<ImageButton
-					android:id="@+id/mainControllerLeft"
+					android:id="@+id/mainControllerLeftImgBtn"
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
 					android:layout_marginEnd="30dp"
-					android:layout_alignTop="@id/maincontrolleImg"
-					android:layout_toStartOf="@+id/maincontrolleImg"
+					android:layout_alignTop="@id/mainControllerBtnImg"
+					android:layout_toStartOf="@+id/mainControllerBtnImg"
 					android:src="@android:drawable/ic_media_rew" />
 
 				<TextView
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
-					android:id="@+id/mainMusicCurrPos"
+					android:id="@+id/mainMusicCurrPosTextView"
 					android:layout_marginBottom="3dp"
 					android:layout_above="@id/mainMusicSeekBar"
 					android:layout_alignStart="@id/mainMusicSeekBar"/>
 
 				<TextView
 					android:layout_width="wrap_content"
-					android:id="@+id/mainMusicDur"
+					android:id="@+id/mainMusicDurTextView"
 					android:layout_marginBottom="3dp"
 					android:layout_above="@id/mainMusicSeekBar"
 					android:layout_alignEnd="@id/mainMusicSeekBar"
 					android:layout_height="wrap_content" />
 
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginBottom="10dp"
+					android:id="@+id/mainPlayModeTextView"
+					android:layout_alignStart="@id/mainControllerBtnImg"
+					android:layout_above="@id/mainControllerBtnImg"/>
 
 				<SeekBar
 					android:id="@+id/mainMusicSeekBar"
@@ -125,7 +132,7 @@
 					android:layout_marginRight="20dp"
 					android:layout_marginBottom="15dp"
 					android:layout_centerHorizontal="true"
-					android:layout_below="@id/maincontrolleImg"/>
+					android:layout_below="@id/mainControllerBtnImg"/>
 
 			</RelativeLayout>
 

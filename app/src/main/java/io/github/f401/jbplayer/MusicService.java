@@ -2,16 +2,23 @@ package io.github.f401.jbplayer;
 
 import android.app.Service;
 import android.content.Intent;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Callable;
 
 public class MusicService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener {
@@ -20,6 +27,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	private MusicQueue mMusicQueue;
     private List<MusicDetail> mMusicList;
 	private MediaPlayer mPlayer;
+	private MusicPlayMode mPlayMode = MusicPlayMode.SEQUENCE;
 	
     private final IMusicService.Stub BINDER = new IMusicService.Stub() {
 
@@ -70,15 +78,38 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
 		@Override
 		public void doPause() throws RemoteException {
-			mPlayer.pause();
+			if (mPlayer.isPlaying())
+				mPlayer.pause();
 		}
 
 		@Override
 		public void doContinue() throws RemoteException {
-			mPlayer.start();
+			if (!mPlayer.isPlaying())
+				mPlayer.start();
+		}
+
+		@Override
+		public void replaceCurrentMusic(MusicDetail music) throws RemoteException {
+			mMusicQueue.replaceCurrent(music);
+            try {
+                replayCurrentSong();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+		@Override
+		public MusicPlayMode getCurrentMode() {
+			return mPlayMode;
+		}
+
+		@Override
+		public void setCurrentMode(MusicPlayMode music) throws RemoteException {
+			mPlayMode = music;
 		}
 	};
 
+	/** Before invoke it, you should fix queue */
 	private void doPlayMusic(MusicDetail detail) throws IOException {
 		mPlayer.reset();
 		mPlayer.setOnPreparedListener(this);
@@ -116,16 +147,31 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	@Override
 	public void onCompletion(MediaPlayer mp) {
         try {
-            playNextSong();
+			playNextSong();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-	private void playNextSong() throws IOException {
-		MusicDetail detail = mMusicQueue.nextSong();
+	private void replayCurrentSong() throws IOException {
+		MusicDetail detail = mMusicQueue.currentSong();
 		doPlayMusic(detail);
 		notifyMusicChange();
+	}
+
+	private void playNextSong() throws IOException {
+		switch (mPlayMode) {
+			case SEQUENCE: {
+				MusicDetail detail = mMusicQueue.nextSong();
+				doPlayMusic(detail);
+				notifyMusicChange();
+				break;
+			}
+			case RANDOM:
+				mMusicQueue.replaceCurrent(mMusicList.get(App.RANDOM.nextInt(mMusicList.size())));
+			case LOOP:  // fall through
+				replayCurrentSong();
+		}
 	}
 
 	private void playPreviousSong() throws IOException {

@@ -5,4 +5,7 @@
     <string name="hello_world">Hello world!</string>
 	<string name="refresh">刷新</string>
     <string name="min_second_time_fmt" formatted="false">%d:%d</string>
+    <string name="random_play">随机播放</string>
+    <string name="single_loop_play">单曲循环</string>
+    <string name="sequence_play">顺序播放</string>
 </resources>

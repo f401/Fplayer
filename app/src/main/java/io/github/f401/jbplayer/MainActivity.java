@@ -1,7 +1,9 @@
 package io.github.f401.jbplayer;
 
+import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.Uri;
@@ -22,6 +24,7 @@ import android.widget.AdapterView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
+import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import io.github.f401.jbplayer.adapters.MusicListAdapter;
 import io.github.f401.jbplayer.databinding.MainBinding;
@@ -31,7 +34,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends AppCompatActivity {
-
+	private static final String TAG = "MainActivity";
     private MainBinding binding;
 	private IMusicService mService;
 	private List<MusicDetail> mMusicList;
@@ -45,10 +48,10 @@ public class MainActivity extends AppCompatActivity {
 			try {
 				curr = mService.getCurrentMusicProgress() / 1000;
 			} catch (RemoteException e) {
-				Log.e("MainActivity", "Pos update error ", e);
+				Log.e(TAG, "Pos update error ", e);
 			}
-			binding.mainMusicCurrPos.setText(getString(R.string.min_second_time_fmt, curr / 60, curr % 60));
-			mHandler.postDelayed(this, 1000);
+			binding.mainMusicCurrPosTextView.setText(getString(R.string.min_second_time_fmt, curr / 60, curr % 60));
+			if (isPositionUpdaterStarted.get()) mHandler.postDelayed(this, 1000);
 		}
 	};
 	private final ServiceConnection mConnection = new ServiceConnection() {
@@ -71,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 		if (mCurrentMusicState == MusicState.PAUSE) {
 			mCurrentMusicState = MusicState.PLAYING;
 			mService.doContinue();
-			binding.maincontrolleImg.setImageResource(android.R.drawable.ic_media_pause);
+			binding.mainControllerBtnImg.setImageResource(android.R.drawable.ic_media_pause);
 		}
 	}
 	
@@ -79,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
 		if (mCurrentMusicState == MusicState.PLAYING) {
 			mCurrentMusicState = MusicState.PAUSE;
 			mService.doPause();
-			binding.maincontrolleImg.setImageResource(android.R.drawable.ic_media_play);
+			binding.mainControllerBtnImg.setImageResource(android.R.drawable.ic_media_play);
 		}
 	}
 
@@ -133,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
 			throw new RuntimeException(e);
 		}
 
-		binding.mainControllerLeft.setOnClickListener(new View.OnClickListener() {
+		binding.mainControllerLeftImgBtn.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
                 try {
@@ -144,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
             }
 		});
 
-		binding.mainControllerRight.setOnClickListener(new View.OnClickListener() {
+		binding.mainControllerRightImgBtn.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
                 try {
@@ -155,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
             }
 		});
 
-		binding.maincontrolleImg.setOnClickListener(new View.OnClickListener() {
+		binding.mainControllerBtnImg.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
                 try {
@@ -172,30 +175,69 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private void showMusicList() {
-		binding.mainLoadingMusic.setVisibility(View.INVISIBLE);
+		binding.mainLoadingMusicProgressBar.setVisibility(View.GONE);
 		binding.mainMusicList.setVisibility(View.VISIBLE);
 		
 		MusicListAdapter adapter = new MusicListAdapter(this, mMusicList);
 		adapter.setOnViewClickListener(new MusicListAdapter.OnItemClickListener() {
 			@Override
 			public void onItemClick(int position) {
-				// TODO: Play Music
-			}
+                try {
+                    mService.replaceCurrentMusic(mMusicList.get(position));
+                } catch (RemoteException e) {
+                    throw new RuntimeException(e);
+                }
+            }
 		});
+		binding.mainMusicList.setLayoutManager(new LinearLayoutManager(this));
 		binding.mainMusicList.setAdapter(adapter);
+		DividerItemDecoration did = new DividerItemDecoration(this, DividerItemDecoration.HORIZONTAL);
+		binding.mainMusicList.addItemDecoration(did);
+
+        try {
+            binding.mainPlayModeTextView.setText(getString(mService.getCurrentMode().getDisplayId()));
+			binding.mainPlayModeTextView.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+                    try {
+                        showChangePlayModeAlertDialog();
+                    } catch (RemoteException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+			});
+        } catch (RemoteException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+	private void showChangePlayModeAlertDialog() throws RemoteException {
+		new AlertDialog.Builder(this)
+				.setSingleChoiceItems(R.array.music_play_mode_array, mService.getCurrentMode().getPos(), new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            mService.setCurrentMode(MusicPlayMode.valueOfArrayPos(which));
+                        } catch (RemoteException e) {
+							Log.e(TAG, "Failed to set mode", e);
+						}
+						dialog.dismiss();
+					}
+				})
+				.show();
 	}
 
 	private void applyDetailToStatusBar(@NonNull MusicDetail detail) {
 		binding.mainTitleTextView.setText(detail.getTitle());
 		binding.mainArtistTextView.setText(detail.getArtist());
-		binding.mainMusicDur.setText(getString(R.string.min_second_time_fmt, detail.getMin(), detail.getSecond()));
+		binding.mainMusicDurTextView.setText(getString(R.string.min_second_time_fmt, detail.getMin(), detail.getSecond()));
 	}
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = MainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+		setContentView(binding.getRoot());
 
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // Android 11及以上
 			if (!Environment.isExternalStorageManager()) {
@@ -206,9 +248,9 @@ public class MainActivity extends AppCompatActivity {
 		}
 		
 		if (TextUtils.isEmpty(App.getSearchRoot())) {
-			binding.mainLoadingMusic.setVisibility(View.INVISIBLE);
+			binding.mainLoadingMusicProgressBar.setVisibility(View.GONE);
 		}
-		
+
         binding.toolbar.setNavigationIcon(R.drawable.ic_menu);
 		binding.toolbar.setNavigationOnClickListener(new View.OnClickListener() {
 
@@ -217,7 +259,6 @@ public class MainActivity extends AppCompatActivity {
 					binding.getRoot().openDrawer(GravityCompat.START);
 				}
 			});
-		binding.mainMusicList.setLayoutManager(new LinearLayoutManager(this));
 		
 		if (!TextUtils.isEmpty(App.getSearchRoot())) {
 			Intent intent = new Intent(this, MusicService.class);
