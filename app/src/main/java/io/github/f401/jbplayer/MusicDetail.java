@@ -3,6 +3,7 @@ package io.github.f401.jbplayer;
 import java.io.File;
 import android.os.Parcelable;
 import android.os.Parcel;
+import java.text.Collator;
 
 public class MusicDetail implements Comparable<MusicDetail>, Parcelable {
 
@@ -63,10 +64,11 @@ public class MusicDetail implements Comparable<MusicDetail>, Parcelable {
 	
 	@Override
 	public int compareTo(MusicDetail o) {
+		Collator col = Collator.getInstance();
 		if (equals(o)) return 0;
-		int cmp = title.compareToIgnoreCase(o.title);
+		int cmp = col.compare(title, o.title);
 		if (cmp != 0) return cmp;
-		cmp = artist.compareToIgnoreCase(o.artist);
+		cmp = col.compare(artist, o.artist);
 		return cmp;
 	}
 

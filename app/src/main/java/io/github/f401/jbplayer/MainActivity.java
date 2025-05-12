@@ -218,6 +218,7 @@ public class MainActivity extends AppCompatActivity {
 					public void onClick(DialogInterface dialog, int which) {
                         try {
                             mService.setCurrentMode(MusicPlayMode.valueOfArrayPos(which));
+							binding.mainPlayModeTextView.setText(MusicPlayMode.valueOfArrayPos(which).getDisplayId());
                         } catch (RemoteException e) {
 							Log.e(TAG, "Failed to set mode", e);
 						}
