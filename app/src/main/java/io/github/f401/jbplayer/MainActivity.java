@@ -32,13 +32,13 @@ import io.github.f401.jbplayer.databinding.MainBinding;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import android.widget.SeekBar;
 
 public class MainActivity extends AppCompatActivity {
 	private static final String TAG = "MainActivity";
     private MainBinding binding;
 	private IMusicService mService;
 	private List<MusicDetail> mMusicList;
-	private MusicDetail mCurrentMusic;
 	private final AtomicBoolean isPositionUpdaterStarted = new AtomicBoolean(false);
 	private final Handler mHandler = new Handler();
 	private final Runnable MUSIC_POSITION_UPDATER = new Runnable() {
@@ -47,10 +47,11 @@ public class MainActivity extends AppCompatActivity {
 			long curr = 0;
 			try {
 				curr = mService.getCurrentMusicProgress() / 1000;
-			} catch (RemoteException e) {
+			} catch (RemoteException | RuntimeException e) {
 				Log.e(TAG, "Pos update error ", e);
 			}
 			binding.mainMusicCurrPosTextView.setText(getString(R.string.min_second_time_fmt, curr / 60, curr % 60));
+			binding.mainMusicSeekBar.setProgress((int) curr);
 			if (isPositionUpdaterStarted.get()) mHandler.postDelayed(this, 1000);
 		}
 	};
@@ -117,11 +118,11 @@ public class MainActivity extends AppCompatActivity {
 			mService.registerOnMusicChangeListener(new IOnMusicChangeListener.Stub() {
 				@Override
 				public void onChange(final MusicDetail detail) throws RemoteException {
+					binding.mainMusicSeekBar.setMax((int) mService.getCurrentMusicDurtion() / 1000);
 					runOnUiThread(new Runnable() {
 						@Override
 						public void run() {
 							applyDetailToStatusBar(detail);
-							mCurrentMusic = detail;
 							startPositionUpdater();
 							try {
 								changeStateToPlaying();
@@ -172,6 +173,23 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 		});
+		
+		binding.mainMusicSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
+				@Override
+				public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+					if (fromUser) {}
+				}
+
+				@Override
+				public void onStartTrackingTouch(SeekBar seekBar) {
+				}
+
+				@Override
+				public void onStopTrackingTouch(SeekBar seekBar) {
+				}
+			});
+		binding.mainMusicSeekBar.setMax(100);
 	}
 
 	private void showMusicList() {
@@ -191,7 +209,7 @@ public class MainActivity extends AppCompatActivity {
 		});
 		binding.mainMusicList.setLayoutManager(new LinearLayoutManager(this));
 		binding.mainMusicList.setAdapter(adapter);
-		DividerItemDecoration did = new DividerItemDecoration(this, DividerItemDecoration.HORIZONTAL);
+		DividerItemDecoration did = new DividerItemDecoration(this, DividerItemDecoration.VERTICAL);
 		binding.mainMusicList.addItemDecoration(did);
 
         try {

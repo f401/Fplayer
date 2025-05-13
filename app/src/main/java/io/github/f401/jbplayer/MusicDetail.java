@@ -116,4 +116,9 @@ public class MusicDetail implements Comparable<MusicDetail>, Parcelable {
 	public int getSecond() {
 		return second;
 	}
+
+	@Override
+	public String toString() {
+		return "MusicDetail {title=" + title + ", path=" + path + "}";
+	}
 }

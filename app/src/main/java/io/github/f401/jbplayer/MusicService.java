@@ -32,6 +32,11 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     private final IMusicService.Stub BINDER = new IMusicService.Stub() {
 
 		@Override
+		public long getCurrentMusicDurtion() {
+			return mPlayer.getDuration();
+		}
+
+		@Override
 		public void fetchMusicList(final String path, final IMusicServiceInitFinishCallback callback) throws RemoteException {
 			Log.i(TAG, "Started to fetch music list. from " + path);
 			App.getThreadPool().submit(new Callable<Void>() {
@@ -115,6 +120,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		mPlayer.setOnPreparedListener(this);
 		mPlayer.setOnCompletionListener(this);
 		mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+		Log.i(TAG, "Trying to play music " + detail);
 		mPlayer.setDataSource(detail.getPath().getPath());
 		mPlayer.prepareAsync();
 	}
@@ -156,7 +162,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	private void replayCurrentSong() throws IOException {
 		MusicDetail detail = mMusicQueue.currentSong();
 		doPlayMusic(detail);
-		notifyMusicChange();
 	}
 
 	private void playNextSong() throws IOException {
@@ -164,7 +169,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 			case SEQUENCE: {
 				MusicDetail detail = mMusicQueue.nextSong();
 				doPlayMusic(detail);
-				notifyMusicChange();
 				break;
 			}
 			case RANDOM:
@@ -177,7 +181,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	private void playPreviousSong() throws IOException {
 		MusicDetail detail = mMusicQueue.playPreviousMusic();
 		doPlayMusic(detail);
-		notifyMusicChange();
 	}
 
 	private void notifyMusicChange() {
