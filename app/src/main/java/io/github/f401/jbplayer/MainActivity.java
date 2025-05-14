@@ -176,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
 				public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 					if (fromUser) {
                         try {
-                            mService.seekCurrentMusicTo(progress);
+                            mService.seekCurrentMusicTo(progress * 1000);
                         } catch (RemoteException e) {
                             Log.e(TAG, "Failed to seek progress to " + progress, e);
                         }

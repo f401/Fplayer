@@ -9,8 +9,6 @@ import android.provider.MediaStore;
 
 import androidx.annotation.NonNull;
 
-import net.sourceforge.pinyin4j.PinyinHelper;
-
 import java.text.Collator;
 import java.text.RuleBasedCollator;
 import java.util.Collections;

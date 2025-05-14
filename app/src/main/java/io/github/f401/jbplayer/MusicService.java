@@ -166,7 +166,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 				case RANDOM:
 					replaceCurrentSongAndPlay(mMusicList.get(App.RANDOM.nextInt(mMusicList.size())));
 					break;
-				case LOOP:  // fall through
+				case LOOP:
 					replayCurrentSong();
 			}
         } catch (IOException e) {
