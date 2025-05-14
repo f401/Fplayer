@@ -12,14 +12,11 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.os.RemoteException;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
-import android.widget.AdapterView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -29,7 +26,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import io.github.f401.jbplayer.adapters.MusicListAdapter;
 import io.github.f401.jbplayer.databinding.MainBinding;
 
-import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import android.widget.SeekBar;
@@ -46,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
 		public void run() {
 			long curr = 0;
 			try {
-				curr = mService.getCurrentMusicProgress() / 1000;
+				curr = mService.getCurrentMusicPosition() / 1000;
 			} catch (RemoteException | RuntimeException e) {
 				Log.e(TAG, "Pos update error ", e);
 			}
@@ -134,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
 				}
 			});
 		} catch (RemoteException e) {
-			throw new RuntimeException(e);
+			Log.e(TAG, "Failed to init because ", e);
 		}
 
 		binding.mainControllerLeftImgBtn.setOnClickListener(new View.OnClickListener() {
@@ -143,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     mService.playPreviousSong();
                 } catch (RemoteException e) {
-                    throw new RuntimeException(e);
+					Log.e(TAG, "", e);
                 }
             }
 		});
@@ -154,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     mService.playNextSong();
                 } catch (RemoteException e) {
-                    throw new RuntimeException(e);
+                    Log.e(TAG, "", e);
                 }
             }
 		});
@@ -178,7 +174,13 @@ public class MainActivity extends AppCompatActivity {
 
 				@Override
 				public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-					if (fromUser) {}
+					if (fromUser) {
+                        try {
+                            mService.seekCurrentMusicTo(progress);
+                        } catch (RemoteException e) {
+                            Log.e(TAG, "Failed to seek progress to " + progress, e);
+                        }
+                    }
 				}
 
 				@Override
@@ -189,7 +191,6 @@ public class MainActivity extends AppCompatActivity {
 				public void onStopTrackingTouch(SeekBar seekBar) {
 				}
 			});
-		binding.mainMusicSeekBar.setMax(100);
 	}
 
 	private void showMusicList() {
@@ -203,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     mService.replaceCurrentMusic(mMusicList.get(position));
                 } catch (RemoteException e) {
-                    throw new RuntimeException(e);
+                    Log.e(TAG, "Failed to replace current music ", e);
                 }
             }
 		});
@@ -213,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
 		binding.mainMusicList.addItemDecoration(did);
 
         try {
-            binding.mainPlayModeTextView.setText(getString(mService.getCurrentMode().getDisplayId()));
+			binding.mainPlayModeTextView.setText(getString(mService.getCurrentMode().getDisplayId()));
 			binding.mainPlayModeTextView.setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View v) {
@@ -234,8 +235,8 @@ public class MainActivity extends AppCompatActivity {
 				.setSingleChoiceItems(R.array.music_play_mode_array, mService.getCurrentMode().getPos(), new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
-                        try {
-                            mService.setCurrentMode(MusicPlayMode.valueOfArrayPos(which));
+						try {
+							mService.setCurrentMode(MusicPlayMode.valueOfArrayPos(which));
 							binding.mainPlayModeTextView.setText(MusicPlayMode.valueOfArrayPos(which).getDisplayId());
                         } catch (RemoteException e) {
 							Log.e(TAG, "Failed to set mode", e);
@@ -255,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = MainBinding.inflate(getLayoutInflater());
+		binding = MainBinding.inflate(getLayoutInflater());
 		setContentView(binding.getRoot());
 
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // Android 11及以上

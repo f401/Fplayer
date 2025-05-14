@@ -1,9 +1,19 @@
 package io.github.f401.jbplayer;
 
 import java.io.File;
+
+import android.icu.text.Transliterator;
 import android.os.Parcelable;
 import android.os.Parcel;
+import android.provider.MediaStore;
+
+import androidx.annotation.NonNull;
+
+import net.sourceforge.pinyin4j.PinyinHelper;
+
 import java.text.Collator;
+import java.text.RuleBasedCollator;
+import java.util.Collections;
 
 public class MusicDetail implements Comparable<MusicDetail>, Parcelable {
 
@@ -11,7 +21,7 @@ public class MusicDetail implements Comparable<MusicDetail>, Parcelable {
 
 		@Override
 		public MusicDetail createFromParcel(Parcel source) {
-			
+
 			return new MusicDetail(
 				source.readString(),
 				source.readString(),
@@ -40,10 +50,10 @@ public class MusicDetail implements Comparable<MusicDetail>, Parcelable {
 		dest.writeSerializable(path);
 	}
 
-    
     private String title;
 	private String artist;
     private int min, second;
+	private String pinyinTitle, pinyinArtist;
 	private File path;
 
 	public MusicDetail(String title, String artist, int min, int second, File path) {
@@ -52,6 +62,8 @@ public class MusicDetail implements Comparable<MusicDetail>, Parcelable {
 		this.min = min;
 		this.second = second;
 		this.path = path;
+		this.pinyinTitle = Utils.getPinyin(title);
+		this.pinyinArtist = Utils.getPinyin(artist);
 	}
 
 	public void setPath(File path) {
@@ -66,9 +78,9 @@ public class MusicDetail implements Comparable<MusicDetail>, Parcelable {
 	public int compareTo(MusicDetail o) {
 		Collator col = Collator.getInstance();
 		if (equals(o)) return 0;
-		int cmp = col.compare(title, o.title);
+		int cmp = col.compare(pinyinTitle, o.pinyinTitle);
 		if (cmp != 0) return cmp;
-		cmp = col.compare(artist, o.artist);
+		cmp = col.compare(pinyinArtist, o.pinyinArtist);
 		return cmp;
 	}
 
@@ -117,8 +129,15 @@ public class MusicDetail implements Comparable<MusicDetail>, Parcelable {
 		return second;
 	}
 
+	@NonNull
 	@Override
 	public String toString() {
-		return "MusicDetail {title=" + title + ", path=" + path + "}";
+		return "MusicDetail{" +
+				"title='" + title + '\'' +
+				", artist='" + artist + '\'' +
+				", min=" + min +
+				", second=" + second +
+				", path=" + path +
+				'}';
 	}
 }

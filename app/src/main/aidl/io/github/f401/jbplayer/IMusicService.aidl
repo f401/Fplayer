@@ -10,9 +10,11 @@ interface IMusicService {
 
     void registerOnMusicChangeListener(in IOnMusicChangeListener listener);
 
-    long getCurrentMusicProgress();
+    long getCurrentMusicPosition();
     
     long getCurrentMusicDurtion();
+
+    void seekCurrentMusicTo(int msec);
 
     void playPreviousSong();
 

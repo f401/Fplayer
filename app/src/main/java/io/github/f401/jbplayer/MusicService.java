@@ -2,6 +2,7 @@ package io.github.f401.jbplayer;
 
 import android.app.Service;
 import android.content.Intent;
+import android.icu.text.Transliterator;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -13,6 +14,7 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +36,11 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		@Override
 		public long getCurrentMusicDurtion() {
 			return mPlayer.getDuration();
+		}
+
+		@Override
+		public void seekCurrentMusicTo(int msec) {
+			mPlayer.seekTo(msec);
 		}
 
 		@Override
@@ -59,7 +66,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		}
 
 		@Override
-		public long getCurrentMusicProgress() {
+		public long getCurrentMusicPosition() {
 			return mPlayer.getCurrentPosition();
 		}
 
@@ -73,34 +80,33 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         }
 
 		@Override
-		public void playNextSong() {
+		public void playNextSong() throws RemoteException {
             try {
                 MusicService.this.playNextSong();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new RemoteException("IOException " + Log.getStackTraceString(e));
             }
         }
 
 		@Override
-		public void doPause() throws RemoteException {
+		public void doPause() {
 			if (mPlayer.isPlaying())
 				mPlayer.pause();
 		}
 
 		@Override
-		public void doContinue() throws RemoteException {
+		public void doContinue() {
 			if (!mPlayer.isPlaying())
 				mPlayer.start();
 		}
 
 		@Override
 		public void replaceCurrentMusic(MusicDetail music) throws RemoteException {
-			mMusicQueue.replaceCurrent(music);
             try {
-                replayCurrentSong();
+				replaceCurrentSongAndPlay(music);
             } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+				throw new RemoteException("IOException " + Log.getStackTraceString(e));
+			}
         }
 
 		@Override
@@ -109,7 +115,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		}
 
 		@Override
-		public void setCurrentMode(MusicPlayMode music) throws RemoteException {
+		public void setCurrentMode(MusicPlayMode music) {
 			mPlayMode = music;
 		}
 	};
@@ -153,32 +159,53 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	@Override
 	public void onCompletion(MediaPlayer mp) {
         try {
-			playNextSong();
+			switch (mPlayMode) {
+				case SEQUENCE:
+					playNextSong();
+					break;
+				case RANDOM:
+					replaceCurrentSongAndPlay(mMusicList.get(App.RANDOM.nextInt(mMusicList.size())));
+					break;
+				case LOOP:  // fall through
+					replayCurrentSong();
+			}
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+	private void replaceCurrentSongAndPlay(MusicDetail detail) throws IOException {
+		if (mMusicQueue == null) {
+			Log.w(TAG, "Empty music queue for request replay");
+			return;
+		}
+		mMusicQueue.replaceCurrent(detail);
+		replayCurrentSong();
+	}
+
 	private void replayCurrentSong() throws IOException {
+		if (mMusicQueue == null) {
+			Log.w(TAG, "Empty music queue for request replay");
+			return;
+		}
 		MusicDetail detail = mMusicQueue.currentSong();
 		doPlayMusic(detail);
 	}
 
 	private void playNextSong() throws IOException {
-		switch (mPlayMode) {
-			case SEQUENCE: {
-				MusicDetail detail = mMusicQueue.nextSong();
-				doPlayMusic(detail);
-				break;
-			}
-			case RANDOM:
-				mMusicQueue.replaceCurrent(mMusicList.get(App.RANDOM.nextInt(mMusicList.size())));
-			case LOOP:  // fall through
-				replayCurrentSong();
+		if (mMusicQueue == null) {
+			Log.w(TAG, "Empty music queue for request next");
+			return;
 		}
+		MusicDetail detail = mMusicQueue.nextSong();
+		doPlayMusic(detail);
 	}
 
 	private void playPreviousSong() throws IOException {
+		if (mMusicQueue == null) {
+			Log.w(TAG, "Empty music queue for request previous");
+			return;
+		}
 		MusicDetail detail = mMusicQueue.playPreviousMusic();
 		doPlayMusic(detail);
 	}

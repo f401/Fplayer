@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.List;
 import java.io.FilenameFilter;
 import java.util.Set;
@@ -23,12 +24,46 @@ import org.jaudiotagger.tag.FieldKey;
 import android.util.Log;
 import android.text.TextUtils;
 
+import net.sourceforge.pinyin4j.PinyinHelper;
+import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;
+import net.sourceforge.pinyin4j.format.HanyuPinyinToneType;
+import net.sourceforge.pinyin4j.format.HanyuPinyinVCharType;
+import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
+
 public class Utils {
 	
 	private static final Set<String> SUFFIX = new HashSet<>();
 	static {
 		SUFFIX.add(".mp3");
 		SUFFIX.add(".flac");
+	}
+
+	// 将中文转为拼音，英文直接返回
+	public static String getPinyin(String input) {
+		StringBuilder pinyin = new StringBuilder();
+		final HanyuPinyinOutputFormat fmt = new HanyuPinyinOutputFormat();
+		fmt.setToneType(HanyuPinyinToneType.WITHOUT_TONE);
+		fmt.setVCharType(HanyuPinyinVCharType.WITH_V);
+		for (int i = 0; i < input.length(); i++) {
+			char c = input.charAt(i);
+			// 检查是否为中文字符
+			if (Character.toString(c).matches("[\\u4e00-\\u9fa5]")) {
+				// 获取字符的拼音
+                String[] pinyinArray = null;
+                try {
+                    pinyinArray = PinyinHelper.toHanyuPinyinStringArray(c, fmt);
+                } catch (BadHanyuPinyinOutputFormatCombination e) {
+                    throw new RuntimeException(e);
+                }
+                if (pinyinArray != null) {
+					pinyin.append(pinyinArray[0]);
+				}
+			} else {
+				// 非中文字符直接追加
+				pinyin.append(c);
+			}
+		}
+		return pinyin.toString();
 	}
     
    public static void write(File file, byte[] data) throws IOException {

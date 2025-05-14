@@ -12,6 +12,7 @@ enum MusicPlayMode implements Parcelable {
     RANDOM(R.string.random_play, 1),
     LOOP(R.string.single_loop_play, 2);
 
+    @NonNull
     public static MusicPlayMode valueOfArrayPos(int pos) {
         switch (pos) {
             case 0: return SEQUENCE;
@@ -19,7 +20,7 @@ enum MusicPlayMode implements Parcelable {
             case 2: return LOOP;
         }
         Log.e("MusicPlayMode", "Unknown pos " + pos);
-        return null;
+        throw new RuntimeException("Unexpected pos " + pos);
     }
 
     @StringRes
