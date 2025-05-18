@@ -22,6 +22,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import android.app.PendingIntent;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.BroadcastReceiver;
+import android.media.RemoteControlClient;
+import android.view.KeyEvent;
 
 public class MusicService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener {
 	private static final String TAG = "MusicService";
@@ -30,6 +36,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     private List<MusicDetail> mMusicList;
 	private MediaPlayer mPlayer;
 	private MusicPlayMode mPlayMode = MusicPlayMode.SEQUENCE;
+	private ComponentName mMediaBtnReceiver;
 	
     private final IMusicService.Stub BINDER = new IMusicService.Stub() {
 
@@ -125,7 +132,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		mPlayer.reset();
 		mPlayer.setOnPreparedListener(this);
 		mPlayer.setOnCompletionListener(this);
-		mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
 		Log.i(TAG, "Trying to play music " + detail);
 		mPlayer.setDataSource(detail.getPath().getPath());
 		mPlayer.prepareAsync();
@@ -136,6 +142,38 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		super.onCreate();
 		mPlayer = new MediaPlayer();
 		mOnChangeCallback = new RemoteCallbackList<>();
+		mMediaBtnReceiver = new ComponentName(this, MediaButtonReceiver.class);
+		((AudioManager) getSystemService(Context.AUDIO_SERVICE)).registerMediaButtonEventReceiver(mMediaBtnReceiver);
+	}
+	
+	private class MediaButtonReceiver extends BroadcastReceiver {
+
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			KeyEvent event = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+			Log.i(TAG, "Recv event " + event);
+			try {
+				switch (event.getKeyCode()) {
+					case KeyEvent.KEYCODE_MEDIA_NEXT: 
+						playNextSong();
+						return;
+					case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+						playPreviousSong();
+						return;
+					case KeyEvent.KEYCODE_MEDIA_PAUSE:
+						mPlayer.pause();
+						return;
+					case KeyEvent.KEYCODE_MEDIA_PLAY:
+						mPlayer.start();
+						return;
+					default: 
+						Log.w(TAG, "Unknown keycode " + event.getKeyCode());
+				}
+			} catch(IOException e) {
+				Log.e(TAG, "Failed to handle bluetooth ", e);
+			}
+		}
+		
 	}
 
 	@Override
@@ -148,6 +186,8 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		super.onDestroy();
 		mPlayer.stop();
 		mPlayer.release();
+		RemoteControlClient c;
+		((AudioManager) getSystemService(Context.AUDIO_SERVICE)).unregisterMediaButtonEventReceiver(mMediaBtnReceiver);
 	}
 
 	@Override

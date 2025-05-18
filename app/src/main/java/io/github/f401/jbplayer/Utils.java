@@ -141,9 +141,11 @@ public class Utils {
 	
 	public static List<MusicDetail> readMusicDetail(List<File> file) throws CannotReadException, InvalidAudioFrameException, IOException, TagException, ReadOnlyFileException  {
 		ArrayList<MusicDetail> res = new ArrayList<>();
+		Log.i("MusicService", "Trying to process " + file.size());
 		for (File f : file) { 
 			res.add(readMusicDetail(f));
 		}
+		Log.i("MusicService", "Finished process ");
 		return res;
 	}
 }

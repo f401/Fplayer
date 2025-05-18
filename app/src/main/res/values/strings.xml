@@ -8,4 +8,5 @@
     <string name="random_play">随机播放</string>
     <string name="single_loop_play">单曲循环</string>
     <string name="sequence_play">顺序播放</string>
+	<string name="edit_music_path">修改音乐路径</string>
 </resources>

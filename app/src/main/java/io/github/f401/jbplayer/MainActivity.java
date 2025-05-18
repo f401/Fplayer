@@ -29,6 +29,12 @@ import io.github.f401.jbplayer.databinding.MainBinding;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import android.widget.SeekBar;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.EditText;
+import android.view.ViewGroup;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothAdapter;
 
 public class MainActivity extends AppCompatActivity {
 	private static final String TAG = "MainActivity";
@@ -95,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 	
-	private void onServiceStarted() {
+	private void fetchMusicList() {
 		try {
 			mService.fetchMusicList(App.getSearchRoot(), new IMusicServiceInitFinishCallback.Stub() {
 
@@ -110,7 +116,15 @@ public class MainActivity extends AppCompatActivity {
 								}
 							});
 					}
-			});
+				});
+		} catch (RemoteException e) {
+			Log.e(TAG, "Failed to fetch music list", e);
+		}
+	}
+	
+	private void onServiceStarted() {
+		fetchMusicList();
+		try {
 			mService.registerOnMusicChangeListener(new IOnMusicChangeListener.Stub() {
 				@Override
 				public void onChange(final MusicDetail detail) throws RemoteException {
@@ -212,7 +226,6 @@ public class MainActivity extends AppCompatActivity {
 		binding.mainMusicList.setAdapter(adapter);
 		DividerItemDecoration did = new DividerItemDecoration(this, DividerItemDecoration.VERTICAL);
 		binding.mainMusicList.addItemDecoration(did);
-
         try {
 			binding.mainPlayModeTextView.setText(getString(mService.getCurrentMode().getDisplayId()));
 			binding.mainPlayModeTextView.setOnClickListener(new View.OnClickListener() {
@@ -246,6 +259,25 @@ public class MainActivity extends AppCompatActivity {
 				})
 				.show();
 	}
+	
+	private void showMusicPathEditDialog() {
+		final EditText text = new EditText(this);
+		text.setText(App.getSearchRoot());
+		text.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		
+		new AlertDialog.Builder(this)
+			.setView(text)
+			.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					App.setSearchRoot(text.getText().toString());
+					fetchMusicList();
+				}
+			})
+			.setNegativeButton(android.R.string.cancel, null)
+			.create().show();
+	}
 
 	private void applyDetailToStatusBar(@NonNull MusicDetail detail) {
 		binding.mainTitleTextView.setText(detail.getTitle());
@@ -258,6 +290,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 		binding = MainBinding.inflate(getLayoutInflater());
 		setContentView(binding.getRoot());
+		setSupportActionBar(binding.toolbar);
 
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // Android 11及以上
 			if (!Environment.isExternalStorageManager()) {
@@ -267,10 +300,6 @@ public class MainActivity extends AppCompatActivity {
 			}
 		}
 		
-		if (TextUtils.isEmpty(App.getSearchRoot())) {
-			binding.mainLoadingMusicProgressBar.setVisibility(View.GONE);
-		}
-
         binding.toolbar.setNavigationIcon(R.drawable.ic_menu);
 		binding.toolbar.setNavigationOnClickListener(new View.OnClickListener() {
 
@@ -285,6 +314,8 @@ public class MainActivity extends AppCompatActivity {
 			startService(intent);
 			bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 		}
+		
+		
     }
 
 	@Override
@@ -295,4 +326,25 @@ public class MainActivity extends AppCompatActivity {
 		stopService(intent);
 		unbindService(mConnection);
 	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.activity_main, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+			case R.id.main_menu_edit_path:
+				showMusicPathEditDialog();
+				return true;
+			case R.id.main_menu_refresh:
+				fetchMusicList();
+				return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+	
+	
 }

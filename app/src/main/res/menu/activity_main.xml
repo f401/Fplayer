@@ -3,7 +3,11 @@
 	xmlns:app="http://schemas.android.com/apk/res-auto">
     
     <item
-        android:id="@+id/refresh"
+        android:id="@+id/main_menu_refresh"
         android:title="@string/refresh"/>
+	
+	<item 
+		android:id="@+id/main_menu_edit_path"
+		android:title="@string/edit_music_path"/>
     
 </menu>

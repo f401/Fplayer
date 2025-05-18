@@ -7,11 +7,20 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import androidx.multidex.MultiDex;
 
 public class App extends Application {
 	public static final Random RANDOM = new Random();
 	private static App global;
 	private static ExecutorService threadpool;
+
+	@Override
+	protected void attachBaseContext(Context base) {
+		super.attachBaseContext(base);
+		MultiDex.install(this);
+	}
+	
+	
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -24,6 +33,12 @@ public class App extends Application {
 		SharedPreferences pref = global.getSharedPreferences("defaults", Context.MODE_PRIVATE);
 		return pref.getString("searchRoot", "/storage/emulated/0/Download/KuGouLite/c/");
 //		return pref.getString("searchRoot", "/storage/emulated/0/Download/KuGouLite/c/");
+	}
+	
+	public static void setSearchRoot(String path) {
+		SharedPreferences.Editor editor = global.getSharedPreferences("defaults", Context.MODE_PRIVATE).edit();
+		editor.putString("searchRoot", path);
+		editor.apply();
 	}
 	
 	public static ExecutorService getThreadPool() {
