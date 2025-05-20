@@ -244,8 +244,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 						if (mPlayer.isPlaying()) {
 							Log.i(TAG, "Playing change to pause");
 							notifyClientPause();
-						} else 
-							notifyClientPlay();
+						}
 					}
 					return true;
 				default:
