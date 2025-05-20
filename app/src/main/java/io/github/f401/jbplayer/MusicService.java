@@ -192,6 +192,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		mMediaSession.setCallback(new MediaSessionCompat.Callback() {
 			@Override
 			public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
+				Log.i(TAG, "Got from callback btn event");
 				if (handleMediaButtonEvent(mediaButtonEvent)) return true;
 				return super.onMediaButtonEvent(mediaButtonEvent);
 			}
