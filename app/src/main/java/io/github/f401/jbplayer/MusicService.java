@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
+import android.content.BroadcastReceiver;
+import android.app.PendingIntent;
 
 public class MusicService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener {
 	private static final String TAG = "MusicService";
@@ -190,32 +192,48 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		mMediaSession.setCallback(new MediaSessionCompat.Callback() {
 			@Override
 			public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
-				Log.i(TAG, "Recv media btn event " + mediaButtonEvent);
-				KeyEvent event = mediaButtonEvent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-				try {
-					switch (event.getKeyCode()) {
-						case KeyEvent.KEYCODE_MEDIA_NEXT:
-							playNextSong();
-							return true;
-						case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
-							playPreviousSong();
-							return true;
-						case KeyEvent.KEYCODE_MEDIA_PAUSE:
-							notifyClientPause();
-							return true;
-						case KeyEvent.KEYCODE_MEDIA_PLAY:
-							notifyClientPlay();
-							return true;
-						default:
-							Log.w(TAG, "Unknown keycode " + event.getKeyCode());
-					}
-				} catch (IOException | RuntimeException e) {
-					Log.e(TAG, "Failed to handle bluetooth ", e);
-				}
+				if (handleMediaButtonEvent(mediaButtonEvent)) return true;
 				return super.onMediaButtonEvent(mediaButtonEvent);
 			}
 		});
+		mMediaSession.setMediaButtonReceiver(PendingIntent.getBroadcast(this, 0, new Intent(this, MediaBroadcast.class), 0));
 		mMediaSession.setActive(true);
+	}
+	
+	
+	private class MediaBroadcast extends BroadcastReceiver {
+
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			handleMediaButtonEvent(intent);
+		}
+
+		
+	}
+	
+	private boolean handleMediaButtonEvent(Intent mediaButtonEvent) {
+		Log.i(TAG, "Recv media btn event " + mediaButtonEvent);
+		KeyEvent event = mediaButtonEvent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+		try {
+			switch (event.getKeyCode()) {
+				case KeyEvent.KEYCODE_MEDIA_NEXT:
+					playNextSong();
+					return true;
+				case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+					playPreviousSong();
+					return true;
+				case KeyEvent.KEYCODE_MEDIA_PAUSE:
+					notifyClientPause();
+					return true;
+				case KeyEvent.KEYCODE_MEDIA_PLAY:
+					notifyClientPlay();
+					return true;
+				default:
+					Log.w(TAG, "Unknown keycode " + event.getKeyCode());
+			}
+		} catch (IOException | RuntimeException e) {
+			Log.e(TAG, "Failed to handle bluetooth ", e);
+		}
 	}
 
 	@Override
