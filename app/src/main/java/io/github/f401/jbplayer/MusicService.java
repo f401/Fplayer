@@ -193,7 +193,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 						})
 						.build();
 		AudioManagerCompat.requestAudioFocus((AudioManager) getSystemService(Context.AUDIO_SERVICE), requestCompat);
-
 		mMediaSession = new MediaSessionCompat(this, "MusicService", new ComponentName(this, MediaBroadcast.class), null);
 //		mMediaSession.setMediaButtonReceiver(PendingIntent.getBroadcast(this, 0, new Intent(this, MediaButtonReceiver.class), PendingIntent.FLAG_IMMUTABLE));
 		mMediaSession.setCallback(new MediaSessionCompat.Callback() {

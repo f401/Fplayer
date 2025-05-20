@@ -38,7 +38,13 @@
 
         <service android:name=".MusicService"
 			android:process=":play"/>
-
+		
+		<receiver
+			android:name=".MediaBroadcast$MediaBroadcast">
+			<intent-filter>
+				<action android:name="android.intent.action.MEDIA_BUTTON"/>
+			</intent-filter>
+		</receiver>
     </application>
 
 </manifest>
