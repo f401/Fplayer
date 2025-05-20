@@ -134,6 +134,12 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		}
 	};
 
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		return START_STICKY;
+	}
+
+	
 	/** Before invoke it, you should fix queue */
 	private void doPlayMusic(MusicDetail detail) throws IOException {
 		mPlayer.reset();
