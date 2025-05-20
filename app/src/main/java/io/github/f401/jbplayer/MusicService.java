@@ -226,7 +226,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	private boolean handleMediaButtonEvent(Intent mediaButtonEvent) {
 		Log.i(TAG, "Recv media btn event " + mediaButtonEvent);
 		KeyEvent event = mediaButtonEvent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-		Log.i(TAG, "Keycode " + event.getKeyCode());
+		Log.i(TAG, "Keyevent " + event);
 		try {
 			switch (event.getKeyCode()) {
 				case KeyEvent.KEYCODE_MEDIA_NEXT:
