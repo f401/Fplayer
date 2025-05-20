@@ -16,25 +16,24 @@ import android.os.RemoteException;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.SeekBar;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import io.github.f401.jbplayer.adapters.MusicListAdapter;
-import io.github.f401.jbplayer.databinding.MainBinding;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import android.widget.SeekBar;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.widget.EditText;
-import android.view.ViewGroup;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothAdapter;
+
+import io.github.f401.jbplayer.adapters.MusicListAdapter;
+import io.github.f401.jbplayer.databinding.MainBinding;
 
 public class MainActivity extends AppCompatActivity {
 	private static final String TAG = "MainActivity";
@@ -73,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
 	private enum MusicState { PAUSE, PLAYING }
 
-	private void changeStateToPlaying() throws RemoteException {
+	private void changeStateToPlay() throws RemoteException {
 		if (mCurrentMusicState == MusicState.PAUSE) {
 			mCurrentMusicState = MusicState.PLAYING;
 			mService.doContinue();
@@ -106,12 +105,13 @@ public class MainActivity extends AppCompatActivity {
 			mService.fetchMusicList(App.getSearchRoot(), new IMusicServiceInitFinishCallback.Stub() {
 
 					@Override
-					public void loadFinished(final List<MusicDetail> src) throws RemoteException {
+					public void loadFinished(final MusicList src) throws RemoteException {
 						runOnUiThread(new Runnable() {
 
 								@Override
 								public void run() {
-									mMusicList = src;
+									Log.i(TAG, "Got music from service");
+									mMusicList = src.mList;
 									showMusicList();
 								}
 							});
@@ -135,12 +135,24 @@ public class MainActivity extends AppCompatActivity {
 							applyDetailToStatusBar(detail);
 							startPositionUpdater();
 							try {
-								changeStateToPlaying();
+								changeStateToPlay();
 							} catch (RemoteException e) {
 								Log.e("MainActivity", "Failed to play", e);
 							}
 						}
 					});
+				}
+			});
+
+			mService.setMusicClient(new IMusicClient.Stub() {
+				@Override
+				public void onChangeStateToPlay() throws RemoteException {
+					changeStateToPlay();
+				}
+
+				@Override
+				public void onChangeStateToPause() throws RemoteException {
+					changeStateToPause();
 				}
 			});
 		} catch (RemoteException e) {
@@ -174,12 +186,12 @@ public class MainActivity extends AppCompatActivity {
 			public void onClick(View v) {
                 try {
                     if (mCurrentMusicState == MusicState.PAUSE) {
-						changeStateToPlaying();
+						changeStateToPlay();
 					} else {
 						changeStateToPause();
 					}
                 } catch (RemoteException e) {
-                    throw new RuntimeException(e);
+					Log.e(TAG, "", e);
                 }
             }
 		});
@@ -335,13 +347,10 @@ public class MainActivity extends AppCompatActivity {
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-		switch (item.getItemId()) {
-			case R.id.main_menu_edit_path:
-				showMusicPathEditDialog();
-				return true;
-			case R.id.main_menu_refresh:
-				fetchMusicList();
-				return true;
+		if (item.getItemId() == R.id.main_menu_edit_path) {
+			showMusicPathEditDialog();
+		} else if (item.getItemId() == R.id.main_menu_refresh) {
+			fetchMusicList();
 		}
 		return super.onOptionsItemSelected(item);
 	}

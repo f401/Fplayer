@@ -1,7 +1,7 @@
 package io.github.f401.jbplayer;
 
-import io.github.f401.jbplayer.MusicDetail;
+import io.github.f401.jbplayer.MusicList;
 
 interface IMusicServiceInitFinishCallback {
-	void loadFinished(in List<MusicDetail> src);
+	void loadFinished(in MusicList src);
 }

@@ -24,8 +24,7 @@
 
         <activity
             android:exported="true"
-            android:name="io.github.f401.jbplayer.MainActivity"
-            android:label="@string/app_name">
+            android:name="io.github.f401.jbplayer.MainActivity">
 
             <intent-filter>
 
@@ -37,9 +36,7 @@
 
         </activity>
 
-        <service
-            android:name=".MusicService"
-            android:process=":play"/>
+        <service android:name=".MusicService" />
 
     </application>
 

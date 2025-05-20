@@ -1,5 +1,22 @@
 package io.github.f401.jbplayer;
 
+import android.text.TextUtils;
+import android.util.Log;
+
+import net.sourceforge.pinyin4j.PinyinHelper;
+import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;
+import net.sourceforge.pinyin4j.format.HanyuPinyinToneType;
+import net.sourceforge.pinyin4j.format.HanyuPinyinVCharType;
+import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
+
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.audio.exceptions.CannotReadException;
+import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
+import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
+import org.jaudiotagger.tag.FieldKey;
+import org.jaudiotagger.tag.TagException;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -8,27 +25,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.List;
-import java.io.FilenameFilter;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.ArrayList;
-import org.jaudiotagger.audio.AudioFile;
-import org.jaudiotagger.audio.AudioFileIO;
-import org.jaudiotagger.audio.exceptions.CannotReadException;
-import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
-import org.jaudiotagger.tag.TagException;
-import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
-import org.jaudiotagger.tag.FieldKey;
-import android.util.Log;
-import android.text.TextUtils;
-
-import net.sourceforge.pinyin4j.PinyinHelper;
-import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;
-import net.sourceforge.pinyin4j.format.HanyuPinyinToneType;
-import net.sourceforge.pinyin4j.format.HanyuPinyinVCharType;
-import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class Utils {
 	
@@ -128,9 +128,11 @@ public class Utils {
 		String artist = a.getTag().getFirst(FieldKey.ARTIST);
 		if (TextUtils.isEmpty(title)) {
 			String name = file.getName();
-			name = name.substring(0, name.lastIndexOf("."));
-			artist = name.substring(0, name.indexOf("-")).trim();
-			title = name.substring(name.indexOf("-") + 1).trim();
+			if (name.contains("-")) {
+				name = name.substring(0, name.lastIndexOf("."));
+				artist = name.substring(0, name.indexOf("-")).trim();
+				title = name.substring(name.indexOf("-") + 1).trim();
+			}
 		}
 		return new MusicDetail(
 			title, artist,
@@ -138,14 +140,19 @@ public class Utils {
 			a.getAudioHeader().getTrackLength() % 60,
 			file);
 	}
-	
-	public static List<MusicDetail> readMusicDetail(List<File> file) throws CannotReadException, InvalidAudioFrameException, IOException, TagException, ReadOnlyFileException  {
+
+	public static List<MusicDetail> readMusicDetail(List<File> file) {
 		ArrayList<MusicDetail> res = new ArrayList<>();
 		Log.i("MusicService", "Trying to process " + file.size());
-		for (File f : file) { 
-			res.add(readMusicDetail(f));
+		for (File f : file) {
+			try {
+				res.add(readMusicDetail(f));
+			} catch (CannotReadException | InvalidAudioFrameException | IOException | TagException |
+					 ReadOnlyFileException e) {
+				Log.w("Utils", "Error when reading " + f, e);
+			}
+			Log.d("Utils", "Finished read ");
 		}
-		Log.i("MusicService", "Finished process ");
 		return res;
 	}
 }

@@ -4,29 +4,32 @@ import io.github.f401.jbplayer.IMusicServiceInitFinishCallback;
 import io.github.f401.jbplayer.IOnMusicChangeListener;
 import io.github.f401.jbplayer.MusicDetail;
 import io.github.f401.jbplayer.MusicPlayMode;
+import io.github.f401.jbplayer.IMusicClient;
 
 interface IMusicService {
-	void fetchMusicList(String path, in IMusicServiceInitFinishCallback callback);
+    oneway void setMusicClient(in IMusicClient client);
 
-    void registerOnMusicChangeListener(in IOnMusicChangeListener listener);
+	oneway void fetchMusicList(String path, in IMusicServiceInitFinishCallback callback);
+
+    oneway void registerOnMusicChangeListener(in IOnMusicChangeListener listener);
 
     long getCurrentMusicPosition();
     
     long getCurrentMusicDurtion();
 
-    void seekCurrentMusicTo(int msec);
+    oneway void seekCurrentMusicTo(int msec);
 
-    void playPreviousSong();
+    oneway void playPreviousSong();
 
-    void playNextSong();
+    oneway void playNextSong();
 
-    void doPause();
+    oneway void doPause();
 
-    void doContinue();
+    oneway void doContinue();
 
-    void replaceCurrentMusic(in MusicDetail music);
+    oneway void replaceCurrentMusic(in MusicDetail music);
 
     MusicPlayMode getCurrentMode();
 
-    void setCurrentMode(in MusicPlayMode music);
+    oneway void setCurrentMode(in MusicPlayMode music);
 }

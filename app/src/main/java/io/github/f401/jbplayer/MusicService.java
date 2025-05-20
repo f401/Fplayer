@@ -1,42 +1,40 @@
 package io.github.f401.jbplayer;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
-import android.icu.text.Transliterator;
-import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
-import android.os.Parcel;
-import android.os.Parcelable;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
+import android.view.KeyEvent;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.media.AudioAttributesCompat;
+import androidx.media.AudioFocusRequestCompat;
+import androidx.media.AudioManagerCompat;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.Callable;
-import android.app.PendingIntent;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.BroadcastReceiver;
-import android.media.RemoteControlClient;
-import android.view.KeyEvent;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MusicService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener {
 	private static final String TAG = "MusicService";
+	private final AtomicBoolean mIsPrepareFinished = new AtomicBoolean(false);
 	private RemoteCallbackList<IOnMusicChangeListener> mOnChangeCallback;
 	private MusicQueue mMusicQueue;
     private List<MusicDetail> mMusicList;
 	private MediaPlayer mPlayer;
 	private MusicPlayMode mPlayMode = MusicPlayMode.SEQUENCE;
-	private ComponentName mMediaBtnReceiver;
+	private MediaSessionCompat mMediaSession;
+	@Nullable
+	private IMusicClient mMusicClient;
 	
     private final IMusicService.Stub BINDER = new IMusicService.Stub() {
 
@@ -51,6 +49,11 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		}
 
 		@Override
+		public void setMusicClient(IMusicClient client) {
+			mMusicClient = client;
+		}
+
+		@Override
 		public void fetchMusicList(final String path, final IMusicServiceInitFinishCallback callback) throws RemoteException {
 			Log.i(TAG, "Started to fetch music list. from " + path);
 			App.getThreadPool().submit(new Callable<Void>() {
@@ -60,7 +63,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 					Collections.sort(res);
 					mMusicList = res;
 					mMusicQueue = new MusicQueue(res);
-					callback.loadFinished(res);
+					callback.loadFinished(new MusicList(mMusicList));
 					Log.i(TAG, "Finished reading, Songs count " + mMusicList.size());
 					return null;
 				}
@@ -70,6 +73,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		@Override
 		public void registerOnMusicChangeListener(IOnMusicChangeListener listener) {
 			mOnChangeCallback.register(listener);
+			Log.d(TAG, "Registered listener " + listener);
 		}
 
 		@Override
@@ -97,13 +101,13 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
 		@Override
 		public void doPause() {
-			if (mPlayer.isPlaying())
+			if (mPlayer.isPlaying() && mIsPrepareFinished.get())
 				mPlayer.pause();
 		}
 
 		@Override
 		public void doContinue() {
-			if (!mPlayer.isPlaying())
+			if (!mPlayer.isPlaying() && mIsPrepareFinished.get())
 				mPlayer.start();
 		}
 
@@ -130,6 +134,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	/** Before invoke it, you should fix queue */
 	private void doPlayMusic(MusicDetail detail) throws IOException {
 		mPlayer.reset();
+		mIsPrepareFinished.set(false);
 		mPlayer.setOnPreparedListener(this);
 		mPlayer.setOnCompletionListener(this);
 		Log.i(TAG, "Trying to play music " + detail);
@@ -137,43 +142,80 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		mPlayer.prepareAsync();
 	}
 
+	private void notifyClientPause() {
+		if (mMusicClient != null) {
+			try {
+				mMusicClient.onChangeStateToPause();
+			} catch (RemoteException e) {
+				Log.e(TAG, "Failed to notify client", e);
+			}
+		}
+	}
+
+	private void notifyClientPlay() {
+		if (mMusicClient != null) {
+			try {
+				mMusicClient.onChangeStateToPlay();
+			} catch (RemoteException e) {
+				Log.e(TAG, "Failed to notify client", e);
+			}
+		}
+	}
+
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		mPlayer = new MediaPlayer();
 		mOnChangeCallback = new RemoteCallbackList<>();
-		mMediaBtnReceiver = new ComponentName(this, MediaButtonReceiver.class);
-		((AudioManager) getSystemService(Context.AUDIO_SERVICE)).registerMediaButtonEventReceiver(mMediaBtnReceiver);
-	}
-	
-	private class MediaButtonReceiver extends BroadcastReceiver {
+		AudioFocusRequestCompat requestCompat =
+				new AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN)
+						.setAudioAttributes(new AudioAttributesCompat.Builder()
+								.setContentType(AudioAttributesCompat.CONTENT_TYPE_MUSIC)
+								.setUsage(AudioAttributesCompat.USAGE_MEDIA)
+								.build())
+						.setOnAudioFocusChangeListener(new AudioManager.OnAudioFocusChangeListener() {
+							@Override
+							public void onAudioFocusChange(int focusChange) {
+								Log.i(TAG, "focus change " + focusChange);
+								if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
+									notifyClientPause();
+								}
+							}
+						})
+						.build();
+		AudioManagerCompat.requestAudioFocus((AudioManager) getSystemService(Context.AUDIO_SERVICE), requestCompat);
 
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			KeyEvent event = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-			Log.i(TAG, "Recv event " + event);
-			try {
-				switch (event.getKeyCode()) {
-					case KeyEvent.KEYCODE_MEDIA_NEXT: 
-						playNextSong();
-						return;
-					case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
-						playPreviousSong();
-						return;
-					case KeyEvent.KEYCODE_MEDIA_PAUSE:
-						mPlayer.pause();
-						return;
-					case KeyEvent.KEYCODE_MEDIA_PLAY:
-						mPlayer.start();
-						return;
-					default: 
-						Log.w(TAG, "Unknown keycode " + event.getKeyCode());
+		mMediaSession = new MediaSessionCompat(this, "MusicService");
+//		mMediaSession.setMediaButtonReceiver(PendingIntent.getBroadcast(this, 0, new Intent(this, MediaButtonReceiver.class), PendingIntent.FLAG_IMMUTABLE));
+		mMediaSession.setCallback(new MediaSessionCompat.Callback() {
+			@Override
+			public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
+				Log.i(TAG, "Recv media btn event " + mediaButtonEvent);
+				KeyEvent event = mediaButtonEvent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+				try {
+					switch (event.getKeyCode()) {
+						case KeyEvent.KEYCODE_MEDIA_NEXT:
+							playNextSong();
+							return true;
+						case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+							playPreviousSong();
+							return true;
+						case KeyEvent.KEYCODE_MEDIA_PAUSE:
+							notifyClientPause();
+							return true;
+						case KeyEvent.KEYCODE_MEDIA_PLAY:
+							notifyClientPlay();
+							return true;
+						default:
+							Log.w(TAG, "Unknown keycode " + event.getKeyCode());
+					}
+				} catch (IOException | RuntimeException e) {
+					Log.e(TAG, "Failed to handle bluetooth ", e);
 				}
-			} catch(IOException e) {
-				Log.e(TAG, "Failed to handle bluetooth ", e);
+				return super.onMediaButtonEvent(mediaButtonEvent);
 			}
-		}
-		
+		});
+		mMediaSession.setActive(true);
 	}
 
 	@Override
@@ -186,12 +228,12 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		super.onDestroy();
 		mPlayer.stop();
 		mPlayer.release();
-		RemoteControlClient c;
-		((AudioManager) getSystemService(Context.AUDIO_SERVICE)).unregisterMediaButtonEventReceiver(mMediaBtnReceiver);
+		mMediaSession.release();
 	}
 
 	@Override
 	public void onPrepared(MediaPlayer mp) {
+		mIsPrepareFinished.set(true);
 		mp.start();
 		notifyMusicChange();
 	}
