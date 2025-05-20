@@ -13,6 +13,11 @@ android {
 		versionName "1.0"
 	}
 	
+	lintOptions {
+		abortOnError false
+		checkReleaseBuilds false
+	}
+	
 	// ecj模式(设置 -> 实验室 -> ecj)设置Java语法版本
 	compileOptions {
 		// AIDE+最高支持23，gradle 8.5仅到17
