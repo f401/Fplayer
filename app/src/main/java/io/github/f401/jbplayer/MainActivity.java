@@ -269,7 +269,7 @@ public class MainActivity extends AppCompatActivity {
 						dialog.dismiss();
 					}
 				})
-				.show();
+				.create().show();
 	}
 	
 	private void showMusicPathEditDialog() {

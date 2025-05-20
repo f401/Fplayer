@@ -36,7 +36,8 @@
 
         </activity>
 
-        <service android:name=".MusicService" />
+        <service android:name=".MusicService"
+			android:process=":play"/>
 
     </application>
 
