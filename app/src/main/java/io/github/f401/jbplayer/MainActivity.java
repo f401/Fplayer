@@ -220,7 +220,7 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private void showMusicList() {
-		binding.mainLoadingMusicProgressBar.setVisibility(View.GONE);
+		binding.mainLoadingMusicProgressBar.setVisibility(View.INVISIBLE);
 		binding.mainMusicList.setVisibility(View.VISIBLE);
 		
 		MusicListAdapter adapter = new MusicListAdapter(this, mMusicList);

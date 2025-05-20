@@ -19,7 +19,7 @@ public class MusicList implements Parcelable {
         mList = new ArrayList<>();
         final int sz = in.readInt();
         for (int i = 0; i < sz; ++i) {
-            mList.add(in.readParcelable(getClass().getClassLoader()));
+            mList.add((MusicDetail) in.readParcelable(getClass().getClassLoader()));
         }
     }
 
