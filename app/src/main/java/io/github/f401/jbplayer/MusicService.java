@@ -234,6 +234,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		} catch (IOException | RuntimeException e) {
 			Log.e(TAG, "Failed to handle bluetooth ", e);
 		}
+		return false;
 	}
 
 	@Override
