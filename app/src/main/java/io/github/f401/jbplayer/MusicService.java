@@ -25,6 +25,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import android.content.BroadcastReceiver;
 import android.app.PendingIntent;
+import android.content.ComponentName;
 
 public class MusicService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener {
 	private static final String TAG = "MusicService";
@@ -187,7 +188,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 						.build();
 		AudioManagerCompat.requestAudioFocus((AudioManager) getSystemService(Context.AUDIO_SERVICE), requestCompat);
 
-		mMediaSession = new MediaSessionCompat(this, "MusicService");
+		mMediaSession = new MediaSessionCompat(this, "MusicService", new ComponentName(this, MediaBroadcast.class), null);
 //		mMediaSession.setMediaButtonReceiver(PendingIntent.getBroadcast(this, 0, new Intent(this, MediaButtonReceiver.class), PendingIntent.FLAG_IMMUTABLE));
 		mMediaSession.setCallback(new MediaSessionCompat.Callback() {
 			@Override
@@ -196,7 +197,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 				return super.onMediaButtonEvent(mediaButtonEvent);
 			}
 		});
-		mMediaSession.setMediaButtonReceiver(PendingIntent.getBroadcast(this, 0, new Intent(this, MediaBroadcast.class), 0));
+		//mMediaSession.setMediaButtonReceiver(PendingIntent.getBroadcast(this, 0, new Intent(this, MediaBroadcast.class), 0));
 		mMediaSession.setActive(true);
 	}
 	
