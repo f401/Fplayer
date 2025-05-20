@@ -238,6 +238,10 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 				case KeyEvent.KEYCODE_MEDIA_PLAY:
 					notifyClientPlay();
 					return true;
+				case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+					if (mPlayer.isPlaying()) notifyClientPause();
+					else notifyClientPlay();
+					return true;
 				default:
 					Log.w(TAG, "Unknown keycode " + event.getKeyCode());
 			}
