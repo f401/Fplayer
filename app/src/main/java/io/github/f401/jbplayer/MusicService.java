@@ -201,16 +201,24 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	}
 	
 	
-	public class MediaBroadcast extends BroadcastReceiver {
+	public static class MediaBroadcast extends BroadcastReceiver {
 		
 		public MediaBroadcast() {}
 		
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			handleMediaButtonEvent(intent);
+			Intent m = new Intent(context, MusicService.class);
+			m.putExtra("MediaButton", intent);
+			context.startService(m);
 		}
+	}
 
-		
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		if (intent.hasExtra("MediaButton")) {
+			handleMediaButtonEvent((Intent) intent.getParcelableExtra("MediaButton"));
+		}
+		return super.onStartCommand(intent, flags, startId);
 	}
 	
 	private boolean handleMediaButtonEvent(Intent mediaButtonEvent) {
