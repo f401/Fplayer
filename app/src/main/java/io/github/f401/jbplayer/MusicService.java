@@ -133,12 +133,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 			mPlayMode = music;
 		}
 	};
-
-	@Override
-	public int onStartCommand(Intent intent, int flags, int startId) {
-		return START_STICKY;
-	}
-
 	
 	/** Before invoke it, you should fix queue */
 	private void doPlayMusic(MusicDetail detail) throws IOException {
@@ -207,8 +201,10 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	}
 	
 	
-	private class MediaBroadcast extends BroadcastReceiver {
-
+	public class MediaBroadcast extends BroadcastReceiver {
+		
+		public MediaBroadcast() {}
+		
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			handleMediaButtonEvent(intent);
