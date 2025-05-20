@@ -40,7 +40,7 @@
 			android:process=":play"/>
 		
 		<receiver
-			android:name=".MediaBroadcast$MediaBroadcast">
+			android:name=".MusicService$MediaBroadcast">
 			<intent-filter>
 				<action android:name="android.intent.action.MEDIA_BUTTON"/>
 			</intent-filter>
