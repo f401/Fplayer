@@ -221,6 +221,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		return super.onStartCommand(intent, flags, startId);
 	}
 	
+	private int playPauseCnt = 0;
 	private boolean handleMediaButtonEvent(Intent mediaButtonEvent) {
 		Log.i(TAG, "Recv media btn event " + mediaButtonEvent);
 		KeyEvent event = mediaButtonEvent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
@@ -241,10 +242,17 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 					return true;
 				case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
 					if (mIsPrepareFinished.get()) {
-						if (mPlayer.isPlaying()) {
-							Log.i(TAG, "Playing change to pause");
-							notifyClientPause();
+						if (++playPauseCnt == 2) {
+							if (mPlayer.isPlaying()) {
+								notifyClientPause();
+							} else {
+								notifyClientPlay();
+							}
+							playPauseCnt = 0;
 						}
+						
+					} else {
+						playPauseCnt = 0;
 					}
 					return true;
 				default:
