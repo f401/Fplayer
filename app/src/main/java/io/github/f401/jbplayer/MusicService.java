@@ -224,6 +224,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	private boolean handleMediaButtonEvent(Intent mediaButtonEvent) {
 		Log.i(TAG, "Recv media btn event " + mediaButtonEvent);
 		KeyEvent event = mediaButtonEvent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+		Log.i(TAG, "Keycode " + event.getKeyCode());
 		try {
 			switch (event.getKeyCode()) {
 				case KeyEvent.KEYCODE_MEDIA_NEXT:
@@ -239,8 +240,13 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 					notifyClientPlay();
 					return true;
 				case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
-					if (mPlayer.isPlaying()) notifyClientPause();
-					else notifyClientPlay();
+					if (mIsPrepareFinished.get()) {
+						if (mPlayer.isPlaying()) {
+							Log.i(TAG, "Playing change to pause");
+							notifyClientPause();
+						} else 
+							notifyClientPlay();
+					}
 					return true;
 				default:
 					Log.w(TAG, "Unknown keycode " + event.getKeyCode());
