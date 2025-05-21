@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.support.v4.media.session.MediaSessionCompat;
@@ -39,6 +40,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	private MediaPlayer mPlayer;
 	private MusicPlayMode mPlayMode = MusicPlayMode.SEQUENCE;
 	private MediaSessionCompat mMediaSession;
+	private AudioFocusRequestCompat mAudioRequest;
 	@Nullable
 	private IMusicClient mMusicClient;
 	
@@ -136,12 +138,12 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	};
 
 	private void doContinue() {
-		if (!mPlayer.isPlaying() && mIsPrepareFinished.get())
+		if (mIsPrepareFinished.get() && !mPlayer.isPlaying())
 			mPlayer.start();
 	}
 
 	private void doPause() {
-		if (mPlayer.isPlaying() && mIsPrepareFinished.get())
+		if (mIsPrepareFinished.get() && mPlayer.isPlaying())
 			mPlayer.pause();
 	}
 
@@ -150,13 +152,14 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		mPlayer.reset();
 		mIsPrepareFinished.set(false);
 		mPlayer.setOnPreparedListener(this);
+		mPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
 		mPlayer.setOnCompletionListener(this);
 		Log.i(TAG, "Trying to play music " + detail);
 		mPlayer.setDataSource(detail.getPath().getPath());
 		mPlayer.prepareAsync();
 	}
 
-	private void notifyClientPause() {
+	private void notifyClientAndPause() {
 		if (mMusicClient != null) {
 			try {
 				mMusicClient.onChangeStateToPause();
@@ -167,7 +170,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		doPause();
 	}
 
-	private void notifyClientPlay() {
+	private void notifyClientAndPlay() {
 		if (mMusicClient != null) {
 			try {
 				mMusicClient.onChangeStateToPlay();
@@ -176,14 +179,15 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 			}
 		}
 		doContinue();
-
 	}
 
 	@Override
 	public void onCreate() {
+//		MediaRouter r = (MediaRouter) getSystemService(Context.MEDIA_ROUTER_SERVICE);
+
 		mPlayer = new MediaPlayer();
 		mOnChangeCallback = new RemoteCallbackList<>();
-		AudioFocusRequestCompat requestCompat =
+		mAudioRequest =
 				new AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN)
 						.setAudioAttributes(new AudioAttributesCompat.Builder()
 								.setContentType(AudioAttributesCompat.CONTENT_TYPE_MUSIC)
@@ -194,12 +198,12 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 							public void onAudioFocusChange(int focusChange) {
 								Log.i(TAG, "focus change " + focusChange);
 								if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
-									notifyClientPause();
+									notifyClientAndPause();
 								}
 							}
 						})
 						.build();
-		AudioManagerCompat.requestAudioFocus((AudioManager) getSystemService(Context.AUDIO_SERVICE), requestCompat);
+		AudioManagerCompat.requestAudioFocus((AudioManager) getSystemService(Context.AUDIO_SERVICE), mAudioRequest);
 		mMediaSession = new MediaSessionCompat(this, "MusicService", new ComponentName(this, MediaBroadcast.class), null);
 		mMediaSession.setCallback(new MediaSessionCompat.Callback() {
 			@Override
@@ -227,9 +231,10 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 					break;
 				}
 				case BluetoothDevice.ACTION_ACL_CONNECTED:
-					Log.i(TAG, "Recv bluetooth dis");
+					Log.i(TAG, "Recv bluetooth c");
 					break;
 				case BluetoothDevice.ACTION_ACL_DISCONNECTED:
+					BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 					m.putExtra(EXTRA_COMMAND, CMD_PAUSE);
 					context.startService(m);
 					break;
@@ -241,16 +246,18 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		if (intent.hasExtra("MediaButton")) {
-			handleMediaButtonEvent((Intent) intent.getParcelableExtra("MediaButton"));
-		} else if (intent.getBooleanExtra(EXTRA_START_FIRST, false)) {
-			Log.i(TAG, "Started service");
-		} else if (intent.hasExtra(EXTRA_COMMAND)) {
-			Log.i(TAG, "Recv cmd " + intent.getStringExtra(EXTRA_COMMAND));
-			switch (intent.getStringExtra(EXTRA_COMMAND)) {
-				case CMD_PAUSE: {
-					notifyClientPause();
-					break;
+		if (intent != null) {
+			if (intent.hasExtra("MediaButton")) {
+				handleMediaButtonEvent((Intent) intent.getParcelableExtra("MediaButton"));
+			} else if (intent.getBooleanExtra(EXTRA_START_FIRST, false)) {
+				Log.i(TAG, "Started service");
+			} else if (intent.hasExtra(EXTRA_COMMAND)) {
+				Log.i(TAG, "Recv cmd " + intent.getStringExtra(EXTRA_COMMAND));
+				switch (intent.getStringExtra(EXTRA_COMMAND)) {
+					case CMD_PAUSE: {
+						notifyClientAndPause();
+						break;
+					}
 				}
 			}
 		}
@@ -275,17 +282,17 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 							playPreviousSong();
 							return true;
 						case KeyEvent.KEYCODE_MEDIA_PAUSE:
-							notifyClientPause();
+							notifyClientAndPause();
 							return true;
 						case KeyEvent.KEYCODE_MEDIA_PLAY:
-							notifyClientPlay();
+							notifyClientAndPlay();
 							return true;
 						case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
 							if (mIsPrepareFinished.get()) {
 								if (mPlayer.isPlaying()) {
-									notifyClientPause();
+									notifyClientAndPause();
 								} else {
-									notifyClientPlay();
+									notifyClientAndPlay();
 								}
 							}
 							return true;
@@ -322,6 +329,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		mPlayer.stop();
 		mPlayer.release();
 		mMediaSession.release();
+		AudioManagerCompat.abandonAudioFocusRequest((AudioManager) getSystemService(Context.AUDIO_SERVICE), mAudioRequest);
 	}
 
 	@Override
