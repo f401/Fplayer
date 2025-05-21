@@ -13,6 +13,8 @@
     <!-- MANAGE_EXTERNAL_STORAGE -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
 
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
@@ -25,24 +27,22 @@
         <activity
             android:exported="true"
             android:name="io.github.f401.jbplayer.MainActivity">
-
             <intent-filter>
-
                 <action android:name="android.intent.action.MAIN"/>
-
                 <category android:name="android.intent.category.LAUNCHER"/>
-
             </intent-filter>
-
         </activity>
 
         <service android:name=".MusicService"
 			android:process=":play"/>
 		
 		<receiver
-			android:name=".MusicService$MediaBroadcast">
+            android:name=".MusicService$MediaBroadcast"
+            android:exported="true">
 			<intent-filter>
 				<action android:name="android.intent.action.MEDIA_BUTTON"/>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
 			</intent-filter>
 		</receiver>
     </application>

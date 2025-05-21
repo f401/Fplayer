@@ -72,18 +72,16 @@ public class MainActivity extends AppCompatActivity {
 
 	private enum MusicState { PAUSE, PLAYING }
 
-	private void changeStateToPlay() throws RemoteException {
+	private void changeIconToPlay() {
 		if (mCurrentMusicState == MusicState.PAUSE) {
 			mCurrentMusicState = MusicState.PLAYING;
-			mService.doContinue();
 			binding.mainControllerBtnImg.setImageResource(android.R.drawable.ic_media_pause);
 		}
 	}
-	
-	private void changeStateToPause() throws RemoteException {
+
+	private void changeIconToPause() {
 		if (mCurrentMusicState == MusicState.PLAYING) {
 			mCurrentMusicState = MusicState.PAUSE;
-			mService.doPause();
 			binding.mainControllerBtnImg.setImageResource(android.R.drawable.ic_media_play);
 		}
 	}
@@ -134,11 +132,7 @@ public class MainActivity extends AppCompatActivity {
 						public void run() {
 							applyDetailToStatusBar(detail);
 							startPositionUpdater();
-							try {
-								changeStateToPlay();
-							} catch (RemoteException e) {
-								Log.e("MainActivity", "Failed to play", e);
-							}
+							changeIconToPlay();
 						}
 					});
 				}
@@ -147,12 +141,12 @@ public class MainActivity extends AppCompatActivity {
 			mService.setMusicClient(new IMusicClient.Stub() {
 				@Override
 				public void onChangeStateToPlay() throws RemoteException {
-					changeStateToPlay();
+					changeIconToPlay();
 				}
 
 				@Override
 				public void onChangeStateToPause() throws RemoteException {
-					changeStateToPause();
+					changeIconToPause();
 				}
 			});
 		} catch (RemoteException e) {
@@ -186,9 +180,11 @@ public class MainActivity extends AppCompatActivity {
 			public void onClick(View v) {
                 try {
                     if (mCurrentMusicState == MusicState.PAUSE) {
-						changeStateToPlay();
+						changeIconToPlay();
+						mService.doContinue();
 					} else {
-						changeStateToPause();
+						changeIconToPause();
+						mService.doPause();
 					}
                 } catch (RemoteException e) {
 					Log.e(TAG, "", e);
@@ -197,7 +193,6 @@ public class MainActivity extends AppCompatActivity {
 		});
 		
 		binding.mainMusicSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-
 				@Override
 				public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 					if (fromUser) {
@@ -323,19 +318,18 @@ public class MainActivity extends AppCompatActivity {
 		
 		if (!TextUtils.isEmpty(App.getSearchRoot())) {
 			Intent intent = new Intent(this, MusicService.class);
+			intent.putExtra(MusicService.EXTRA_START_FIRST, true);
 			startService(intent);
 			bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 		}
-		
-		
     }
 
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		Intent intent = new Intent(this, MusicService.class);
+//		Intent intent = new Intent(this, MusicService.class);
 		stopPositionUpdater();
-		stopService(intent);
+//		stopService(intent);
 		unbindService(mConnection);
 	}
 
