@@ -151,7 +151,6 @@ public class Utils {
 					 ReadOnlyFileException e) {
 				Log.w("Utils", "Error when reading " + f, e);
 			}
-			Log.d("Utils", "Finished read ");
 		}
 		return res;
 	}
