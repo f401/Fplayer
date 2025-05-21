@@ -13,7 +13,11 @@
     <!-- MANAGE_EXTERNAL_STORAGE -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
 
-    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <!-- 与蓝牙设备配对 -->
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+
+    <!-- 防止手机休眠 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
         android:allowBackup="true"
@@ -21,30 +25,43 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
         android:name=".App"
-		android:requestLegacyExternalStorage="true"
+        android:requestLegacyExternalStorage="true"
         android:resizeableActivity="true">
 
         <activity
             android:exported="true"
             android:name="io.github.f401.jbplayer.MainActivity">
+
             <intent-filter>
+
                 <action android:name="android.intent.action.MAIN"/>
+
                 <category android:name="android.intent.category.LAUNCHER"/>
+
             </intent-filter>
+
         </activity>
 
-        <service android:name=".MusicService"
-			android:process=":play"/>
-		
-		<receiver
+        <service
+            android:name=".MusicService"
+            android:process=":play"/>
+
+        <receiver
             android:name=".MusicService$MediaBroadcast"
             android:exported="true">
-			<intent-filter>
-				<action android:name="android.intent.action.MEDIA_BUTTON"/>
-                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
-                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
-			</intent-filter>
-		</receiver>
+
+            <intent-filter>
+
+                <action android:name="android.intent.action.MEDIA_BUTTON"/>
+
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED"/>
+
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED"/>
+
+            </intent-filter>
+
+        </receiver>
+
     </application>
 
 </manifest>
