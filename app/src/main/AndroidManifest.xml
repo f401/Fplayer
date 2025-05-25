@@ -44,7 +44,7 @@
 
         <service
             android:name=".MusicService"
-            android:process=":play"/>
+			android:process=":play"/>
 
         <receiver
             android:name=".MusicService$MediaBroadcast"

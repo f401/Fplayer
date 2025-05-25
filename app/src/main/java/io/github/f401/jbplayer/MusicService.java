@@ -27,13 +27,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class MusicService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener {
+public class MusicService extends Service implements MediaPlayer.OnCompletionListener {
 	public static final String EXTRA_START_FIRST = "io.github.f401.music.START_MUSIC_SERVICE_FIRST";
 	public static final String EXTRA_COMMAND = "io.github.f401.music.CMD";
 	public static final String CMD_PAUSE = "pause";
 	private static final String TAG = "MusicService";
-	private final AtomicBoolean mIsPrepareFinished = new AtomicBoolean(false);
+	private static final int STATE_FIRST = 0;
+	private static final int STATE_FINISH = 1;
+	private static final int STATE_PREPARING = 2;
+	private final AtomicInteger mPrepareState = new AtomicInteger(STATE_FIRST);
 	private RemoteCallbackList<IOnMusicChangeListener> mOnChangeCallback;
 	private MusicQueue mMusicQueue;
     private List<MusicDetail> mMusicList;
@@ -43,17 +49,18 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	private AudioFocusRequestCompat mAudioRequest;
 	@Nullable
 	private IMusicClient mMusicClient;
+	private Future<?> mPrepareTask;
 	
     private final IMusicService.Stub BINDER = new IMusicService.Stub() {
 
 		@Override
 		public long getCurrentMusicDurtion() {
-			return mPlayer.getDuration();
+			return mPrepareState.get() == STATE_FINISH ? mPlayer.getDuration() : 0;
 		}
 
 		@Override
 		public void seekCurrentMusicTo(int msec) {
-			mPlayer.seekTo(msec);
+			if (mPrepareState.get() == STATE_FINISH) mPlayer.seekTo(msec);
 		}
 
 		@Override
@@ -86,25 +93,17 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
 		@Override
 		public long getCurrentMusicPosition() {
-			return mPlayer.getCurrentPosition();
+			return mPrepareState.get() == STATE_FINISH ? mPlayer.getCurrentPosition() : 0;
 		}
 
 		@Override
 		public void playPreviousSong() {
-            try {
-                MusicService.this.playPreviousSong();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            MusicService.this.playPreviousSong();
         }
 
 		@Override
-		public void playNextSong() throws RemoteException {
-            try {
-                MusicService.this.playNextSong();
-            } catch (IOException e) {
-                throw new RemoteException("IOException " + Log.getStackTraceString(e));
-            }
+		public void playNextSong() {
+            MusicService.this.playNextSong();
         }
 
 		@Override
@@ -118,12 +117,8 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		}
 
 		@Override
-		public void replaceCurrentMusic(MusicDetail music) throws RemoteException {
-            try {
-				replaceCurrentSongAndPlay(music);
-            } catch (IOException e) {
-				throw new RemoteException("IOException " + Log.getStackTraceString(e));
-			}
+		public void replaceCurrentMusic(MusicDetail music) {
+			replaceCurrentSongAndPlay(music);
         }
 
 		@Override
@@ -138,25 +133,51 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	};
 
 	private void doContinue() {
-		if (mIsPrepareFinished.get() && !mPlayer.isPlaying())
+		if (mPrepareState.get() == STATE_FINISH && !mPlayer.isPlaying())
 			mPlayer.start();
 	}
 
 	private void doPause() {
-		if (mIsPrepareFinished.get() && mPlayer.isPlaying())
+		if (mPrepareState.get() == STATE_FINISH && mPlayer.isPlaying())
 			mPlayer.pause();
 	}
 
 	/** Before invoke it, you should fix queue */
-	private void doPlayMusic(MusicDetail detail) throws IOException {
-		mPlayer.reset();
-		mIsPrepareFinished.set(false);
-		mPlayer.setOnPreparedListener(this);
-		mPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
-		mPlayer.setOnCompletionListener(this);
-		Log.i(TAG, "Trying to play music " + detail);
-		mPlayer.setDataSource(detail.getPath().getPath());
-		mPlayer.prepareAsync();
+	private void doPlayMusic(final MusicDetail detail) {
+		if (mPrepareTask != null && !mPrepareTask.isDone()) {
+			Log.i(TAG, "Interprete thread");
+			mPrepareTask.cancel(true);
+		}
+		mPrepareTask = App.getThreadPool().submit(new Runnable() {
+
+				@Override
+				public void run() {
+					if (!mPrepareState.compareAndSet(STATE_FIRST, STATE_PREPARING)) {
+						for (; !mPrepareState.compareAndSet(STATE_FINISH, STATE_PREPARING) ; ) {}
+					}
+					mPlayer.reset();
+					mPlayer.setWakeMode(MusicService.this, PowerManager.PARTIAL_WAKE_LOCK);
+					Log.i(TAG, "Trying to play music " + detail);
+					try {
+						mPlayer.setDataSource(detail.getPath().getPath());
+						mPlayer.prepare();
+						if (!Thread.currentThread().isInterrupted()) {
+							Log.d(TAG, "Playing " + detail);
+							mPlayer.start();
+							notifyMusicChange();
+						}
+					} catch (IllegalStateException | IllegalArgumentException | IOException e) {
+						mPlayer.reset();
+						Log.w(TAG, "Err" , e);
+						throw new RuntimeException(e);
+					} finally {
+						mPrepareState.set(STATE_FINISH);
+					}
+				}
+			
+		});
+		
+		
 	}
 
 	private void notifyClientAndPause() {
@@ -288,7 +309,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 							notifyClientAndPlay();
 							return true;
 						case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
-							if (mIsPrepareFinished.get()) {
+							if (mPrepareState.get() == STATE_FINISH) {
 								if (mPlayer.isPlaying()) {
 									notifyClientAndPause();
 								} else {
@@ -303,7 +324,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 				mLastClickTime = 0;
 			}
 
-		} catch (IOException | RuntimeException e) {
+		} catch (RuntimeException e) {
 			Log.e(TAG, "Failed to handle bluetooth ", e);
 		}
 		return false;
@@ -317,7 +338,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 	@Override
 	public boolean onUnbind(Intent intent) {
 		mMusicClient = null;
-		if (!mIsPrepareFinished.get() || !mPlayer.isPlaying()) {
+		if (mPrepareState.get() == STATE_FINISH || !mPlayer.isPlaying()) {
 			stopSelf();
 		}
 		return super.onUnbind(intent);
@@ -331,33 +352,23 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		mMediaSession.release();
 		AudioManagerCompat.abandonAudioFocusRequest((AudioManager) getSystemService(Context.AUDIO_SERVICE), mAudioRequest);
 	}
-
-	@Override
-	public void onPrepared(MediaPlayer mp) {
-		mIsPrepareFinished.set(true);
-		mp.start();
-		notifyMusicChange();
-	}
-
+	
 	@Override
 	public void onCompletion(MediaPlayer mp) {
-        try {
-			switch (mPlayMode) {
-				case SEQUENCE:
-					playNextSong();
-					break;
-				case RANDOM:
-					replaceCurrentSongAndPlay(mMusicList.get(App.RANDOM.nextInt(mMusicList.size())));
-					break;
-				case LOOP:
-					replayCurrentSong();
-			}
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+		switch (mPlayMode) {
+			case SEQUENCE:
+				playNextSong();
+				break;
+			case RANDOM:
+				replaceCurrentSongAndPlay(mMusicList.get(App.RANDOM.nextInt(mMusicList.size())));
+				break;
+			case LOOP:
+				replayCurrentSong();
+		}
+       
     }
 
-	private void replaceCurrentSongAndPlay(MusicDetail detail) throws IOException {
+	private void replaceCurrentSongAndPlay(MusicDetail detail) {
 		if (mMusicQueue == null) {
 			Log.w(TAG, "Empty music queue for request replay");
 			return;
@@ -366,7 +377,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		replayCurrentSong();
 	}
 
-	private void replayCurrentSong() throws IOException {
+	private void replayCurrentSong() {
 		if (mMusicQueue == null) {
 			Log.w(TAG, "Empty music queue for request replay");
 			return;
@@ -375,7 +386,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		doPlayMusic(detail);
 	}
 
-	private void playNextSong() throws IOException {
+	private void playNextSong() {
 		if (mMusicQueue == null) {
 			Log.w(TAG, "Empty music queue for request next");
 			return;
@@ -384,7 +395,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 		doPlayMusic(detail);
 	}
 
-	private void playPreviousSong() throws IOException {
+	private void playPreviousSong() {
 		if (mMusicQueue == null) {
 			Log.w(TAG, "Empty music queue for request previous");
 			return;
