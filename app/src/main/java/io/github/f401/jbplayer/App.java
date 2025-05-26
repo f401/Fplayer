@@ -1,13 +1,14 @@
 package io.github.f401.jbplayer;
+
 import android.app.Application;
-import android.content.SharedPreferences;
 import android.content.Context;
+import android.content.SharedPreferences;
+
+import androidx.multidex.MultiDex;
 
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-import androidx.multidex.MultiDex;
 
 public class App extends Application {
 	public static final Random RANDOM = new Random();
@@ -44,4 +45,8 @@ public class App extends Application {
 	public static ExecutorService getThreadPool() {
 		return threadpool;
 	}
+
+    public static int dp2px(int dp) {
+        return Math.round(global.getResources().getDisplayMetrics().density * dp);
+    }
 }

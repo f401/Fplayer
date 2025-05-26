@@ -128,10 +128,12 @@ public class Utils {
 		String artist = a.getTag().getFirst(FieldKey.ARTIST);
 		if (TextUtils.isEmpty(title)) {
 			String name = file.getName();
+			name = name.substring(0, name.lastIndexOf("."));
 			if (name.contains("-")) {
-				name = name.substring(0, name.lastIndexOf("."));
 				artist = name.substring(0, name.indexOf("-")).trim();
 				title = name.substring(name.indexOf("-") + 1).trim();
+			} else {
+				title = name;
 			}
 		}
 		return new MusicDetail(

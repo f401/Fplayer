@@ -1,15 +1,17 @@
 package io.github.f401.jbplayer;
+
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.os.Build;
+import android.os.Process;
 import android.util.Log;
+
 import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
-import android.os.Process;
 
 public class CrashHandler implements Thread.UncaughtExceptionHandler {
 	private static final String TAG = "CrashHandler";
@@ -32,6 +34,10 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
 		Process.killProcess(Process.myPid());
 		System.exit(1);
 	}
+
+    public static void writeThrowableToLog(Throwable e) {
+        if (INSTANCE != null) INSTANCE.writeLog(INSTANCE.buildLog(e));
+    }
 	
 	private void writeLog(String log) {
 		String time = DATE_FORMAT.format(new Date());

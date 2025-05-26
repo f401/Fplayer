@@ -9,7 +9,7 @@ import io.github.f401.jbplayer.IMusicClient;
 interface IMusicService {
     oneway void setMusicClient(in IMusicClient client);
 
-	oneway void fetchMusicList(String path, in IMusicServiceInitFinishCallback callback);
+	oneway void fetchMusicList(int mode, String path, in IMusicServiceInitFinishCallback callback);
 
     oneway void registerOnMusicChangeListener(in IOnMusicChangeListener listener);
 

@@ -26,15 +26,15 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MusicService extends Service implements MediaPlayer.OnCompletionListener {
 	public static final String EXTRA_START_FIRST = "io.github.f401.music.START_MUSIC_SERVICE_FIRST";
 	public static final String EXTRA_COMMAND = "io.github.f401.music.CMD";
 	public static final String CMD_PAUSE = "pause";
+	public static final int MODE_FORCE = 0;
+	public static final int MODE_CACHED_THEN_NOTIFY = 1;
 	private static final String TAG = "MusicService";
 	private static final int STATE_FIRST = 0;
 	private static final int STATE_FINISH = 1;
@@ -64,31 +64,47 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 		}
 
 		@Override
-		public void setMusicClient(IMusicClient client) {
+		public void setMusicClient(IMusicClient client) throws RemoteException {
 			mMusicClient = client;
+			if (mPrepareState.get() == STATE_FINISH) {
+				if (mPlayer.isPlaying()) {
+					client.onChangeStateToPlay();
+				} else {
+					client.onChangeStateToPause();
+				}
+			}
 		}
 
 		@Override
-		public void fetchMusicList(final String path, final IMusicServiceInitFinishCallback callback) throws RemoteException {
+		public void fetchMusicList(final int mode, final String path, final IMusicServiceInitFinishCallback callback) throws RemoteException {
 			Log.i(TAG, "Started to fetch music list. from " + path);
 			App.getThreadPool().submit(new Callable<Void>() {
 				@Override
 				public Void call() throws Exception {
-					List<MusicDetail> res = Utils.readMusicDetail(Utils.discoveryMusic(new File(path)));
-					Collections.sort(res);
-					mMusicList = res;
-					mMusicQueue = new MusicQueue(res);
-					callback.loadFinished(new MusicList(mMusicList));
-					Log.i(TAG, "Finished reading, Songs count " + mMusicList.size());
+					if (mode == MODE_FORCE || mMusicList == null) {
+						List<MusicDetail> res = Utils.readMusicDetail(Utils.discoveryMusic(new File(path)));
+						Collections.sort(res);
+						mMusicList = res;
+						mMusicQueue = new MusicQueue(res);
+						callback.loadFinished(new MusicList(mMusicList));
+						Log.i(TAG, "Finished reading, Songs count " + mMusicList.size());
+					} else if (mode == MODE_CACHED_THEN_NOTIFY) {
+						callback.loadFinished(new MusicList(mMusicList));
+						notifyMusicChange();
+						Log.i(TAG, "Rebind new client");
+					}
 					return null;
 				}
 			});
 		}
 
 		@Override
-		public void registerOnMusicChangeListener(IOnMusicChangeListener listener) {
+		public void registerOnMusicChangeListener(IOnMusicChangeListener listener) throws RemoteException {
 			mOnChangeCallback.register(listener);
 			Log.d(TAG, "Registered listener " + listener);
+			if (mPrepareState.get() == STATE_FINISH) {
+				listener.onChange(mMusicQueue.currentSong());
+			}
 		}
 
 		@Override
@@ -103,7 +119,7 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 
 		@Override
 		public void playNextSong() {
-            MusicService.this.playNextSong();
+			MusicService.this.playNextSong(true);
         }
 
 		@Override
@@ -153,7 +169,8 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 				@Override
 				public void run() {
 					if (!mPrepareState.compareAndSet(STATE_FIRST, STATE_PREPARING)) {
-						for (; !mPrepareState.compareAndSet(STATE_FINISH, STATE_PREPARING) ; ) {}
+						while (!mPrepareState.compareAndSet(STATE_FINISH, STATE_PREPARING)) {
+						}
 					}
 					mPlayer.reset();
 					mPlayer.setWakeMode(MusicService.this, PowerManager.PARTIAL_WAKE_LOCK);
@@ -169,7 +186,7 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 					} catch (IllegalStateException | IllegalArgumentException | IOException e) {
 						mPlayer.reset();
 						Log.w(TAG, "Err" , e);
-						throw new RuntimeException(e);
+						CrashHandler.writeThrowableToLog(e);
 					} finally {
 						mPrepareState.set(STATE_FINISH);
 					}
@@ -237,7 +254,6 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 		mMediaSession.setActive(true);
 	}
 	
-	
 	public static class MediaBroadcast extends BroadcastReceiver {
 		
 		public MediaBroadcast() {}
@@ -297,7 +313,7 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 				if (event.getEventTime() - mLastClickTime < 2000) {
 					switch (event.getKeyCode()) {
 						case KeyEvent.KEYCODE_MEDIA_NEXT:
-							playNextSong();
+							playNextSong(true);
 							return true;
 						case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
 							playPreviousSong();
@@ -355,17 +371,7 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 	
 	@Override
 	public void onCompletion(MediaPlayer mp) {
-		switch (mPlayMode) {
-			case SEQUENCE:
-				playNextSong();
-				break;
-			case RANDOM:
-				replaceCurrentSongAndPlay(mMusicList.get(App.RANDOM.nextInt(mMusicList.size())));
-				break;
-			case LOOP:
-				replayCurrentSong();
-		}
-       
+		playNextSong(false);
     }
 
 	private void replaceCurrentSongAndPlay(MusicDetail detail) {
@@ -386,13 +392,38 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 		doPlayMusic(detail);
 	}
 
-	private void playNextSong() {
+	private void playNextSong(boolean fromUser) {
 		if (mMusicQueue == null) {
 			Log.w(TAG, "Empty music queue for request next");
 			return;
 		}
-		MusicDetail detail = mMusicQueue.nextSong();
-		doPlayMusic(detail);
+		if (fromUser) {
+			switch (mPlayMode) {
+				case LOOP:
+				case SEQUENCE:
+					MusicDetail detail = mMusicQueue.nextSong();
+					doPlayMusic(detail);
+					break;
+				case RANDOM:
+					replaceCurrentSongAndPlay(mMusicList.get(App.RANDOM.nextInt(mMusicList.size())));
+					break;
+
+			}
+			return;
+		}
+		switch (mPlayMode) {
+			case SEQUENCE:
+				MusicDetail detail = mMusicQueue.nextSong();
+				doPlayMusic(detail);
+				break;
+			case RANDOM:
+				replaceCurrentSongAndPlay(mMusicList.get(App.RANDOM.nextInt(mMusicList.size())));
+				break;
+			case LOOP:
+				replayCurrentSong();
+		}
+
+
 	}
 
 	private void playPreviousSong() {

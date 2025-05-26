@@ -97,10 +97,10 @@ public class MainActivity extends AppCompatActivity {
 			mHandler.removeCallbacks(MUSIC_POSITION_UPDATER);
 		}
 	}
-	
-	private void fetchMusicList() {
+
+	private void fetchMusicList(final int mode) {
 		try {
-			mService.fetchMusicList(App.getSearchRoot(), new IMusicServiceInitFinishCallback.Stub() {
+			mService.fetchMusicList(mode, App.getSearchRoot(), new IMusicServiceInitFinishCallback.Stub() {
 
 					@Override
 					public void loadFinished(final MusicList src) throws RemoteException {
@@ -121,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
 	}
 	
 	private void onServiceStarted() {
-		fetchMusicList();
+		fetchMusicList(MusicService.MODE_CACHED_THEN_NOTIFY);
 		try {
 			mService.registerOnMusicChangeListener(new IOnMusicChangeListener.Stub() {
 				@Override
@@ -279,7 +279,7 @@ public class MainActivity extends AppCompatActivity {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
 					App.setSearchRoot(text.getText().toString());
-					fetchMusicList();
+					fetchMusicList(MusicService.MODE_FORCE);
 				}
 			})
 			.setNegativeButton(android.R.string.cancel, null)
@@ -344,7 +344,7 @@ public class MainActivity extends AppCompatActivity {
 		if (item.getItemId() == R.id.main_menu_edit_path) {
 			showMusicPathEditDialog();
 		} else if (item.getItemId() == R.id.main_menu_refresh) {
-			fetchMusicList();
+			fetchMusicList(MusicService.MODE_FORCE);
 		}
 		return super.onOptionsItemSelected(item);
 	}
