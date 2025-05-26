@@ -173,6 +173,7 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 						}
 					}
 					mPlayer.reset();
+					mPlayer.setOnCompletionListener(MusicService.this);
 					mPlayer.setWakeMode(MusicService.this, PowerManager.PARTIAL_WAKE_LOCK);
 					Log.i(TAG, "Trying to play music " + detail);
 					try {
@@ -422,8 +423,6 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 			case LOOP:
 				replayCurrentSong();
 		}
-
-
 	}
 
 	private void playPreviousSong() {
