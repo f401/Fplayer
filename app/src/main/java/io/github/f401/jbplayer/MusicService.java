@@ -354,7 +354,7 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 	@Override
 	public boolean onUnbind(Intent intent) {
 		mMusicClient = null;
-		if (mPrepareState.get() == STATE_FINISH || !mPlayer.isPlaying()) {
+		if (mPrepareState.get() == STATE_FINISH && !mPlayer.isPlaying()) {
 			stopSelf();
 		}
 		return super.onUnbind(intent);
