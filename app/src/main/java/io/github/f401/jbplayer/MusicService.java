@@ -263,7 +263,7 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
 		public void onReceive(Context context, Intent intent) {
 			Intent m = new Intent(context, MusicService.class);
 			switch (intent.getAction()) {
-				case Intent.EXTRA_KEY_EVENT: {
+				case Intent.ACTION_MEDIA_BUTTON: {
 					m.putExtra("MediaButton", intent);
 					context.startService(m);
 					break;
